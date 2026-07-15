@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elect. Cebrián | TIEN 21 — Electrónica y Electrodomésticos</title>
+    <meta name="description" content="Elect. Cebrián, distribuidor oficial TIEN 21 en Tomelloso. Televisores, electrodomésticos, audio, telefonía e informática con servicio técnico propio.">
+
+    <!--
+    ╔═══════════════════════════════════════════════════════════════╗
+    ║  INSTRUCCIONES DE DESPLIEGUE                                 ║
+    ║                                                               ║
+    ║  Pon estas 4 imágenes EN LA MISMA CARPETA que este HTML:     ║
+    ║    • definitiva.png                       ← Keyframe real 1  ║
+    ║    • Gemini_Generated_Image_7dwu7k...     ← Keyframe real 2  ║
+    ║    • Gemini_Generated_Image_7dwu7k__1_... ← Keyframe real 3  ║
+    ║    • Gemini_Generated_Image_7dwu7k__2_... ← Keyframe real 4  ║
+    ║                                                               ║
+    ║  AÑADIR MÁS FRAMES: edita CONFIG.images en el bloque <script>║
+    ║  El motor redistribuye todo automáticamente hasta 24 imágenes ║
+    ╚═══════════════════════════════════════════════════════════════╝
+    -->
+
+    <link rel="preload" as="image" href="definitiva.png">
+    <link rel="preload" as="image" href="Gemini_Generated_Image_7dwu7k7dwu7k7dwu.png">
+    <link rel="preload" as="image" href="Gemini_Generated_Image_7dwu7k7dwu7k7dwu__1_.png">
+    <link rel="preload" as="image" href="Gemini_Generated_Image_7dwu7k7dwu7k7dwu__2_.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+    /* ═══ TOKENS DE DISEÑO ═══════════════════════════════════════ */
+    :root {
+        --cyan:      #00e5ff;
+        --red:       #ff1744;
+        --bg:        #020408;
+        --text:      rgba(224,247,250,0.75);
+        --glow-cyan: 0 0 8px rgba(0,229,255,0.5), 0 0 24px rgba(0,229,255,0.25);
+        --glow-red:  0 0 8px rgba(255,23,68,0.5),  0 0 24px rgba(255,23,68,0.25);
+        --f-display: 'Orbitron', monospace;
+        --f-body:    'Inter', system-ui, sans-serif;
+        --ease-out:  cubic-bezier(0.16,1,0.3,1);
+    }
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    html { font-size:16px; -webkit-font-smoothing:antialiased; scroll-behavior:smooth; }
+    body { background:var(--bg); color:var(--text); font-family:var(--f-body); overflow-x:hidden; line-height:1.6; }
+
+    /* ═══ LOADER ═════════════════════════════════════════════════ */
+    #loader {
+        position:fixed; inset:0; background:var(--bg); z-index:9999;
+        display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.25rem;
+        transition:opacity .6s ease;
+    }
+    .ld-logo {
+        font-family:var(--f-display); font-size:clamp(1.2rem,5vw,2rem); font-weight:900;
+        letter-spacing:.22em; color:var(--cyan); text-shadow:var(--glow-cyan);
+        animation:neonOn .9s steps(4,end) both;
+    }
+    .ld-sub  { font-family:var(--f-display); font-size:.5rem; letter-spacing:.42em; color:rgba(0,229,255,.4); }
+    .ld-track { width:220px; height:1px; background:rgba(0,229,255,.12); overflow:hidden; }
+    #ld-fill {
+        height:100%; width:0%;
+        background:linear-gradient(90deg,var(--red),var(--cyan));
+        box-shadow:0 0 8px var(--cyan); transition:width .3s ease;
+    }
+    .ld-count { font-family:var(--f-display); font-size:.42rem; letter-spacing:.28em; color:rgba(0,229,255,.3); }
+    @keyframes neonOn { 0%{opacity:0} 40%{opacity:.8} 55%{opacity:.2} 80%{opacity:.9} 100%{opacity:1} }
+
+    /* ═══ BARRA DE PROGRESO ══════════════════════════════════════ */
+    #progress-bar {
+        position:fixed; top:0; left:0; height:2px; width:0%;
+        background:linear-gradient(90deg,var(--red),var(--cyan));
+        box-shadow:var(--glow-cyan); z-index:1000; pointer-events:none;
+    }
+
+    /* ═══ ESCENA PRINCIPAL ═══════════════════════════════════════ */
+    #scene { position:relative; width:100%; height:100dvh; overflow:hidden; background:#000; }
+
+    /* Canvas de renderizado — motor de 24 frames */
+    #cinema-canvas {
+        position:absolute; top:0; left:0; width:100%; height:100%;
+        display:block; image-rendering:auto;
+    }
+
+    /* ═══ OVERLAYS ═══════════════════════════════════════════════ */
+    /* Viñeta: bordes oscuros que se intensifican al avanzar */
+    #vignette-overlay {
+        position:absolute; inset:0; z-index:5; pointer-events:none;
+        background:radial-gradient(ellipse at center,
+            transparent 28%, rgba(0,0,0,.25) 62%, rgba(0,0,0,.88) 100%);
+        transition:opacity .08s linear;
+    }
+    /* Grano de película (textura procedural generada en JS) */
+    #grain-overlay {
+        position:absolute; top:-50%; left:-50%; width:200%; height:200%;
+        opacity:.028; z-index:6; pointer-events:none;
+        mix-blend-mode:overlay; background-size:256px 256px;
+        animation:grainShift .55s steps(5) infinite;
+    }
+    @keyframes grainShift {
+        0%  {transform:translate(0,0)}   20%{transform:translate(-1.5%,-1%)}
+        40% {transform:translate(1%,2%)} 60%{transform:translate(-1%,1%)}
+        80% {transform:translate(2%,-1.5%)} 100%{transform:translate(0,0)}
+    }
+    /* Scanlines CRT sutiles */
+    #scanlines {
+        position:absolute; inset:0; z-index:7; pointer-events:none;
+        background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);
+    }
+
+    /* ═══ HUD OVERLAY — Interfaz de cámara/escáner ═══════════════
+       Diseño inspirado en viewfinder cinematográfico + scanner HUD
+    ════════════════════════════════════════════════════════════════ */
+    #hud { position:absolute; inset:0; z-index:15; pointer-events:none; font-family:var(--f-display); }
+
+    /* Reticulos de esquina */
+    .hud-mark { position:absolute; width:18px; height:18px; }
+    .hud-mark.tl { top:14px;    left:14px;  border-top:1.5px solid rgba(0,229,255,.38); border-left:1.5px solid rgba(0,229,255,.38); }
+    .hud-mark.tr { top:14px;    right:14px; border-top:1.5px solid rgba(0,229,255,.38); border-right:1.5px solid rgba(0,229,255,.38); }
+    .hud-mark.bl { bottom:14px; left:14px;  border-bottom:1.5px solid rgba(0,229,255,.38); border-left:1.5px solid rgba(0,229,255,.38); }
+    .hud-mark.br { bottom:14px; right:14px; border-bottom:1.5px solid rgba(0,229,255,.38); border-right:1.5px solid rgba(0,229,255,.38); }
+
+    /* Info superior: nombre tienda (izq) + estado (dcha) */
+    .hud-top { position:absolute; top:1.25rem; left:1.5rem; right:1.5rem; display:flex; justify-content:space-between; }
+    .hud-corner { font-size:.4rem; letter-spacing:.38em; color:rgba(0,229,255,.38); line-height:2; }
+    .hud-corner.right { text-align:right; }
+    .hud-corner span  { display:block; }
+
+    /* Número de frame central (fantasma, muy sutil) */
+    #hud-center {
+        position:absolute; top:50%; left:50%;
+        transform:translate(-50%,-50%);
+        display:flex; flex-direction:column; align-items:center; gap:.22rem;
+        opacity:0; transition:opacity .5s ease; pointer-events:none;
+    }
+    .hud-num-ghost {
+        font-size:clamp(5rem,18vw,8.5rem); font-weight:900; line-height:1;
+        color:rgba(0,229,255,.07);
+        -webkit-text-stroke:1px rgba(0,229,255,.14);
+        letter-spacing:.08em; user-select:none;
+    }
+    .hud-num-lbl { font-size:.38rem; letter-spacing:.5em; color:rgba(0,229,255,.2); text-align:center; }
+
+    /* Barra de progreso inferior con puntos de keyframe */
+    .hud-bottom {
+        position:absolute; bottom:1rem; left:0; right:0;
+        display:flex; flex-direction:column; align-items:center; gap:.45rem;
+    }
+    .hud-track { width:clamp(180px,42vw,300px); height:1px; background:rgba(0,229,255,.1); position:relative; }
+    #hud-track-fill {
+        position:absolute; top:0; left:0; height:100%; width:0%;
+        background:linear-gradient(90deg,var(--red),var(--cyan));
+        box-shadow:0 0 6px rgba(0,229,255,.5);
+    }
+    /* Contenedor de puntos de transición (generados por JS) */
+    #hud-dot-container { position:absolute; top:-3px; left:0; width:100%; height:7px; }
+    .hud-dot {
+        position:absolute; top:0; width:7px; height:7px; border-radius:50%;
+        background:rgba(0,229,255,.1); border:1px solid rgba(0,229,255,.2);
+        transform:translateX(-50%); transition:background .25s,border-color .25s,box-shadow .25s;
+    }
+    .hud-dot.active { background:rgba(0,229,255,.75); border-color:var(--cyan); box-shadow:0 0 8px rgba(0,229,255,.65); }
+    #hud-frame-info  { font-size:.4rem;  letter-spacing:.28em; color:rgba(0,229,255,.35); }
+    #hud-phase-btm   { font-size:.38rem; letter-spacing:.42em; color:rgba(255,23,68,.5); }
+
+    /* ═══ INDICADOR DE SCROLL ════════════════════════════════════ */
+    #scroll-hint {
+        position:absolute; bottom:3.8rem; left:50%; transform:translateX(-50%);
+        z-index:20; display:flex; flex-direction:column; align-items:center; gap:.55rem;
+        pointer-events:none; transition:opacity .5s ease;
+    }
+    .sh-word { font-family:var(--f-display); font-size:.44rem; letter-spacing:.5em; color:var(--cyan); text-shadow:var(--glow-cyan); }
+    .sh-arrows { display:flex; flex-direction:column; align-items:center; gap:1px; }
+    .sh-arrow { width:12px; height:12px; border-right:1.5px solid rgba(0,229,255,.8); border-bottom:1.5px solid rgba(0,229,255,.8); transform:rotate(45deg); animation:shPulse 1.4s ease-in-out infinite; }
+    .sh-arrow:nth-child(2) { animation-delay:.18s; border-color:rgba(0,229,255,.5); }
+    .sh-arrow:nth-child(3) { animation-delay:.36s; border-color:rgba(0,229,255,.25); }
+    @keyframes shPulse { 0%,100%{transform:rotate(45deg) translate(0,0)} 50%{transform:rotate(45deg) translate(4px,4px)} }
+
+    /* ═══ BOTONES FLOTANTES ══════════════════════════════════════ */
+    .float-group { position:fixed; bottom:1.5rem; right:1.5rem; display:flex; flex-direction:column; gap:.7rem; z-index:500; }
+    .f-btn {
+        width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+        border:none; cursor:pointer; text-decoration:none;
+        opacity:0; transform:scale(.7); pointer-events:none;
+        transition:opacity .3s var(--ease-out), transform .3s var(--ease-out), box-shadow .2s;
+    }
+    .f-btn.show { opacity:1; transform:scale(1); pointer-events:auto; }
+    .f-btn:hover { transform:scale(1.1) !important; }
+    .f-btn-wa  { background:#25d366; box-shadow:0 4px 18px rgba(37,211,102,.4); }
+    .f-btn-wa:hover { box-shadow:0 6px 28px rgba(37,211,102,.65); }
+    .f-btn-top {
+        background:rgba(2,4,8,.85); border:1px solid rgba(0,229,255,.35) !important;
+        color:var(--cyan); font-family:var(--f-display); font-size:1rem;
+        backdrop-filter:blur(8px); box-shadow:var(--glow-cyan);
+    }
+    .f-btn-top:hover { box-shadow:0 0 22px rgba(0,229,255,.65); }
+
+    /* ═══ CONTENIDO ══════════════════════════════════════════════ */
+    #content { position:relative; z-index:10; background:var(--bg); opacity:0; transition:opacity 1.1s ease; }
+    #content.is-visible { opacity:1; }
+    .neon-rule {
+        width:100%; height:1px;
+        background:linear-gradient(90deg,transparent,var(--red) 25%,var(--cyan) 50%,var(--red) 75%,transparent);
+        opacity:.3;
+    }
+
+    /* Bienvenida */
+    #sec-welcome {
+        padding:6rem 1.5rem 5rem; display:flex; flex-direction:column;
+        align-items:center; text-align:center; position:relative;
+        background:radial-gradient(ellipse 80% 30% at center -5%,rgba(0,229,255,.05),transparent);
+    }
+    #sec-welcome::before {
+        content:''; position:absolute; top:0; left:50%; transform:translateX(-50%);
+        width:1px; height:60px; background:linear-gradient(to bottom,var(--cyan),transparent); opacity:.45;
+    }
+    .wl-eyebrow { font-family:var(--f-display); font-size:.52rem; letter-spacing:.5em; color:var(--red); text-shadow:var(--glow-red); margin-bottom:.9rem; }
+    #sec-welcome h1 { font-family:var(--f-display); font-size:clamp(2.4rem,8vw,5rem); font-weight:900; color:var(--cyan); text-shadow:var(--glow-cyan); letter-spacing:.04em; line-height:1; margin-bottom:.4rem; }
+    .wl-brand   { font-family:var(--f-display); font-size:clamp(.5rem,1.8vw,.78rem); letter-spacing:.35em; color:var(--red); text-shadow:var(--glow-red); margin-bottom:2.25rem; }
+    #sec-welcome p { max-width:520px; font-size:clamp(.88rem,2vw,1rem); color:var(--text); font-weight:300; line-height:1.9; }
+
+    /* Productos */
+    #sec-products { padding:5rem 1.5rem; max-width:1080px; margin:0 auto; }
+    .sec-head { font-family:var(--f-display); font-size:clamp(.72rem,2vw,1rem); letter-spacing:.22em; color:var(--cyan); text-shadow:var(--glow-cyan); text-align:center; margin-bottom:3.5rem; }
+    .sec-head::after { content:''; display:block; width:32px; height:2px; background:var(--red); box-shadow:var(--glow-red); margin:.65rem auto 0; border-radius:1px; }
+    .grid-products { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; }
+    @media(max-width:560px) { .grid-products { grid-template-columns:repeat(2,1fr); } }
+    .prod-card {
+        background:rgba(0,229,255,.035); border:1px solid rgba(0,229,255,.1); border-radius:8px;
+        padding:1.75rem 1rem; text-align:center; position:relative; overflow:hidden; cursor:default;
+        opacity:0; transform:translateY(28px); transition:background .25s,border-color .25s,transform .2s;
+    }
+    .prod-card::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--red),var(--cyan)); transform:scaleX(0); transform-origin:left; transition:transform .35s var(--ease-out); }
+    .prod-card:hover { background:rgba(0,229,255,.07); border-color:rgba(0,229,255,.3); transform:translateY(-3px); box-shadow:0 0 40px rgba(0,229,255,.06); }
+    .prod-card:hover::after { transform:scaleX(1); }
+    .prod-icon  { font-size:2rem; display:block; margin-bottom:.65rem; filter:drop-shadow(0 0 7px rgba(0,229,255,.3)); }
+    .prod-label { font-family:var(--f-display); font-size:.52rem; letter-spacing:.18em; color:var(--cyan); }
+
+    /* Marcas */
+    #sec-brands { padding:3rem 1.5rem; overflow:hidden; }
+    .brands-marquee-wrap { overflow:hidden; mask-image:linear-gradient(90deg,transparent,black 8%,black 92%,transparent); -webkit-mask-image:linear-gradient(90deg,transparent,black 8%,black 92%,transparent); }
+    .brands-marquee { display:flex; gap:2.5rem; width:max-content; animation:mScroll 22s linear infinite; }
+    .brands-marquee:hover { animation-play-state:paused; }
+    .brand-pill { font-family:var(--f-display); font-size:.58rem; letter-spacing:.22em; color:rgba(0,229,255,.32); border:1px solid rgba(0,229,255,.11); padding:.48rem 1.2rem; border-radius:2px; white-space:nowrap; transition:color .2s,border-color .2s; }
+    .brands-marquee:hover .brand-pill { color:rgba(0,229,255,.58); border-color:rgba(0,229,255,.24); }
+    @keyframes mScroll { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+
+    /* Información + QR */
+    #sec-info { padding:5rem 1.5rem; background:rgba(0,229,255,.016); border-top:1px solid rgba(0,229,255,.07); border-bottom:1px solid rgba(0,229,255,.07); }
+    .info-grid { max-width:1080px; margin:0 auto; display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:3rem; align-items:start; }
+    .info-block h3 { font-family:var(--f-display); font-size:.52rem; letter-spacing:.35em; color:var(--red); text-shadow:var(--glow-red); margin-bottom:1.1rem; }
+    .info-block ul { list-style:none; display:flex; flex-direction:column; gap:.45rem; }
+    .info-block li { font-size:.875rem; color:var(--text); font-weight:300; padding-left:1.1rem; position:relative; line-height:1.7; }
+    .info-block li::before { content:'▸'; position:absolute; left:0; top:.12rem; color:var(--cyan); font-size:.62rem; }
+    .qr-wrap { display:flex; flex-direction:column; align-items:center; gap:.75rem; }
+    .qr-box { position:relative; padding:1.5rem; background:rgba(2,8,16,.7); border:1px solid rgba(0,229,255,.22); border-radius:10px; box-shadow:0 0 50px rgba(0,229,255,.06); display:flex; flex-direction:column; align-items:center; gap:.75rem; backdrop-filter:blur(12px); }
+    .qr-box::before { content:''; position:absolute; top:-1px; left:-1px; width:14px; height:14px; border-top:2px solid var(--cyan); border-left:2px solid var(--cyan); border-radius:4px 0 0 0; }
+    .qr-box::after  { content:''; position:absolute; bottom:-1px; right:-1px; width:14px; height:14px; border-bottom:2px solid var(--cyan); border-right:2px solid var(--cyan); border-radius:0 0 4px 0; }
+    #qrcode-el canvas, #qrcode-el img { display:block; border:3px solid rgba(255,255,255,.9); border-radius:4px; }
+    .qr-label { font-family:var(--f-display); font-size:.45rem; letter-spacing:.3em; color:var(--cyan); text-align:center; }
+    .qr-url   { font-size:.68rem; color:rgba(224,247,250,.25); text-align:center; word-break:break-all; max-width:180px; }
+
+    /* Footer */
+    footer { padding:3rem 1.5rem; text-align:center; border-top:1px solid rgba(0,229,255,.06); display:flex; flex-direction:column; align-items:center; gap:.45rem; }
+    .ft-logo { font-family:var(--f-display); font-size:.62rem; letter-spacing:.3em; color:var(--cyan); text-shadow:var(--glow-cyan); }
+    .ft-copy  { font-size:.72rem; color:rgba(224,247,250,.18); }
+
+    @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } }
+    </style>
+</head>
+<body>
+
+<!-- ═══ PANTALLA DE CARGA ═══════════════════════════════════════ -->
+<div id="loader">
+    <div class="ld-logo">ELECT. CEBRIÁN</div>
+    <div class="ld-sub">DISTRIBUIDOR TIEN 21 · TOMELLOSO</div>
+    <div class="ld-track"><div id="ld-fill"></div></div>
+    <div class="ld-count" id="ld-count">Iniciando motor de 24 frames...</div>
+</div>
+
+<!-- ═══ BARRA DE PROGRESO DE SCROLL ═════════════════════════════ -->
+<div id="progress-bar" aria-hidden="true"></div>
+
+<!-- ═══ BOTONES FLOTANTES ════════════════════════════════════════ -->
+<div class="float-group">
+    <!-- ⚙️ Cambia el número de WhatsApp en CONFIG.whatsappNumber -->
+    <a class="f-btn f-btn-wa" id="btn-wa" href="#" target="_blank" rel="noopener" aria-label="WhatsApp">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+    </a>
+    <button class="f-btn f-btn-top" id="btn-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Subir al inicio">↑</button>
+</div>
+
+<!-- ═══ ESCENA — Motor canvas de 24 frames ═══════════════════════
+     GSAP pina este elemento y sincroniza la animación con el scroll.
+     Canvas interpola entre las imágenes reales generando 24 frames.
+═════════════════════════════════════════════════════════════════ -->
+<div id="scene">
+    <canvas id="cinema-canvas" aria-label="Animación de entrada a la tienda Elect. Cebrián"></canvas>
+    <div id="vignette-overlay" style="opacity:0.28" aria-hidden="true"></div>
+    <div id="grain-overlay" aria-hidden="true"></div>
+    <div id="scanlines"    aria-hidden="true"></div>
+
+    <!-- HUD: interfaz de viewfinder cinematográfico -->
+    <div id="hud" aria-hidden="true">
+        <div class="hud-mark tl"></div>
+        <div class="hud-mark tr"></div>
+        <div class="hud-mark bl"></div>
+        <div class="hud-mark br"></div>
+
+        <!-- Info superior -->
+        <div class="hud-top">
+            <div class="hud-corner">
+                <span>ELECT. CEBRIÁN</span>
+                <span>MODO ENTRADA</span>
+            </div>
+            <div class="hud-corner right">
+                <span>TIEN 21</span>
+                <span id="hud-phase">◉ EN ESPERA</span>
+            </div>
+        </div>
+
+        <!-- Barra de progreso inferior -->
+        <div class="hud-bottom">
+            <div class="hud-track">
+                <div id="hud-track-fill"></div>
+                <!-- Puntos de transición generados dinámicamente por JS -->
+                <div id="hud-dot-container"></div>
+            </div>
+            <div id="hud-frame-info">FRAME 01 / 24  ·  PROXIMIDAD 0%</div>
+            <div id="hud-phase-btm">◉ SCROLL PARA ENTRAR</div>
+        </div>
+    </div>
+
+    <!-- Indicador de scroll (desaparece al empezar el desplazamiento) -->
+    <div id="scroll-hint" aria-hidden="true">
+        <span class="sh-word">ENTRA</span>
+        <div class="sh-arrows">
+            <div class="sh-arrow"></div>
+            <div class="sh-arrow"></div>
+            <div class="sh-arrow"></div>
+        </div>
+    </div>
+</div><!-- /#scene -->
+
+
+<!-- ═══ CONTENIDO — Aparece después de la animación ═════════════ -->
+<div id="content">
+
+    <section id="sec-welcome" aria-labelledby="h-welcome">
+        <p class="wl-eyebrow">Bienvenido a</p>
+        <h1 id="h-welcome">Elect. Cebrián</h1>
+        <p class="wl-brand">Distribuidor Oficial · TIEN 21 · Tomelloso</p>
+        <p>Tu tienda de referencia en Tomelloso para televisores, electrodomésticos, audio de alta fidelidad, telefonía e informática. Más de veinte años ofreciendo asesoramiento personalizado y servicio técnico propio.</p>
+    </section>
+
+    <div class="neon-rule"></div>
+
+    <section id="sec-products" aria-labelledby="h-products">
+        <h2 class="sec-head" id="h-products">Nuestros Productos</h2>
+        <div class="grid-products" id="grid-products" role="list">
+            <div class="prod-card" role="listitem"><span class="prod-icon" aria-hidden="true">📺</span><span class="prod-label">Televisores</span></div>
+            <div class="prod-card" role="listitem"><span class="prod-icon" aria-hidden="true">🏠</span><span class="prod-label">Electrodomésticos</span></div>
+            <div class="prod-card" role="listitem"><span class="prod-icon" aria-hidden="true">🔊</span><span class="prod-label">Audio &amp; HiFi</span></div>
+            <div class="prod-card" role="listitem"><span class="prod-icon" aria-hidden="true">📱</span><span class="prod-label">Telefonía</span></div>
+            <div class="prod-card" role="listitem"><span class="prod-icon" aria-hidden="true">💻</span><span class="prod-label">Informática</span></div>
+            <div class="prod-card" role="listitem"><span class="prod-icon" aria-hidden="true">🔧</span><span class="prod-label">Servicio Técnico</span></div>
+        </div>
+    </section>
+
+    <div class="neon-rule"></div>
+
+    <section id="sec-brands" aria-label="Marcas que distribuimos">
+        <div class="brands-marquee-wrap">
+            <div class="brands-marquee" id="brands-marquee" aria-hidden="true"></div>
+        </div>
+    </section>
+
+    <div class="neon-rule"></div>
+
+    <section id="sec-info" aria-labelledby="h-info">
+        <h2 class="sec-head" id="h-info" style="margin-bottom:3rem">Encuéntranos</h2>
+        <div class="info-grid">
+            <div class="info-block">
+                <h3>Horario</h3>
+                <ul>
+                    <li>Lunes – Viernes: 10:00 – 14:00 | 17:00 – 20:30</li>
+                    <li>Sábado: 10:00 – 14:00</li>
+                    <li>Domingo y festivos: Cerrado</li>
+                </ul>
+            </div>
+            <div class="info-block">
+                <h3>Contacto</h3>
+                <!-- ⚙️ Personaliza tu dirección y teléfonos reales -->
+                <ul>
+                    <li>📍 C/ Tu Dirección, Nº X — 13700 Tomelloso</li>
+                    <li>📞 926 XX XX XX</li>
+                    <li>📱 6XX XXX XXX</li>
+                    <li>✉️ info@tudominio.es</li>
+                </ul>
+            </div>
+            <div class="info-block">
+                <h3 style="text-align:center">Escaneamos</h3>
+                <div class="qr-wrap">
+                    <div class="qr-box">
+                        <div id="qrcode-el" aria-label="Código QR de contacto"></div>
+                        <div class="qr-label">Escanea y contacta</div>
+                        <div class="qr-url" id="qr-url-display"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="neon-rule"></div>
+
+    <footer>
+        <div class="ft-logo">ELECT. CEBRIÁN · TIEN 21</div>
+        <div class="ft-copy">© 2025 Electrodomésticos Cebrián — Tomelloso, Castilla-La Mancha</div>
+    </footer>
+
+</div><!-- /#content -->
+
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   ⚙️  CONFIGURACIÓN — Edita aquí para personalizar tu tienda
+══════════════════════════════════════════════════════════════════ */
+const CONFIG = {
+
+    /*
+     * IMÁGENES DEL RECORRIDO CINEMÁTICO (mínimo 2, máximo 24)
+     * ─────────────────────────────────────────────────────────
+     * El motor distribuye las imágenes AUTOMÁTICAMENTE en las 24
+     * posiciones del timeline. Con 4 imágenes → cada una ocupa
+     * ~6 frames virtuales con interpolación suave entre ellas.
+     *
+     * Para añadir más frames generados con IA: descomenta las
+     * líneas correspondientes y nombra tus archivos igual.
+     */
+    images: [
+        'fotograma-2.png',                                        // Frame real 1 → Fachada exterior
+        'fotograma-3.png',         // Frame real 2 → Puertas abiertas
+        'fotograma-4.png',     // Frame real 3 → Umbral entrada
+        'fotograma-5.png',     // Frame real 4 → Interior túnel
+        'fotograma-6.png',
+        'fotograma-7.png',
+        'fotograma-8.png',
+        'fotograma-9.png',
+        'fotograma-10.png',
+        'fotograma-11.png',
+        'fotograma-12.png',
+        'fotograma-13.png',
+        'fotograma-14.png',
+        'fotograma-15.png',
+        'fotograma-16.png',
+        'fotograma-17.png',
+        'fotograma-18.png',
+        'fotograma-19.png',
+        'fotograma-20.png',
+        'fotograma-21.png',
+        'fotograma-22.png',
+        'fotograma-23.png',
+        'fotograma-24.png',
+        // ── Añade aquí hasta 24 frames reales cuando los tengas: ──
+        // 'frame05.png', 'frame06.png', 'frame07.png', 'frame08.png',
+        // 'frame09.png', 'frame10.png', 'frame11.png', 'frame12.png',
+        // 'frame13.png', 'frame14.png', 'frame15.png', 'frame16.png',
+        // 'frame17.png', 'frame18.png', 'frame19.png', 'frame20.png',
+        // 'frame21.png', 'frame22.png', 'frame23.png', 'frame24.png',
+    ],
+
+    // ── Parámetros del motor ─────────────────────────────────────
+    totalFrames:        24,     // Frames virtuales del contador HUD (fijo en 24)
+    scrollAmount:    '220%',    // Espacio de scroll total para completar la secuencia
+    scrubValue:         1.6,    // Suavidad del scrub (1 = directo · 2.5 = muy suave)
+    maxZoom:            1.65,   // Zoom máximo al llegar al interior (+65%)
+    zoomEasePower:      1.6,    // Curvatura del zoom (1=lineal · 3=cúbico acelerado)
+    transitionWidth:    0.45,   // Fracción del segmento dedicada al crossfade (0-1)
+    maxBlurPx:          3.5,    // Blur máximo de movimiento durante transiciones (px)
+    maxBrightnessBoost: 0.14,   // Aumento de brillo progresivo al entrar (+14%)
+    maxSatBoost:        0.50,   // Boost de saturación (neones más vivos) (+50%)
+    maxContrast:        0.08,   // Boost de contraste cinematográfico (+8%)
+    flashBoostPeak:     0.12,   // Destello de luz en el pico de cada transición (+12%)
+
+    // ── Contacto y contenido ─────────────────────────────────────
+    // ⚙️ Cambia estas URLs por las tuyas reales:
+    qrUrl:          'https://wa.me/34926XXXXXX',
+    whatsappNumber: '34926XXXXXX',
+    brands: ['Samsung','LG','Sony','Bosch','Siemens','Apple','Xiaomi','Hisense','Philips','Beko','Haier','AEG','Panasonic','Toshiba'],
+
+    // Internos — calculados en runtime, no editar
+    _kf:    null,  // Posiciones de keyframes
+    _zones: null,  // Zonas de transición
+};
+
+/* ══════════════════════════════════════════════════════════════════
+   MOTOR DE 24 FRAMES — Distribución e interpolación de keyframes
+══════════════════════════════════════════════════════════════════ */
+
+/**
+ * Distribuye N imágenes reales en CONFIG.totalFrames posiciones.
+ * Con 4 imágenes y 24 frames → posiciones [0, 8, 15, 23]
+ * Con 24 imágenes → posiciones [0, 1, 2, ..., 23] (1 a 1)
+ */
+function buildKeyframeMap(n, total) {
+    if (n < 2) return [0];
+    return Array.from({length: n}, (_, i) =>
+        Math.round(i * (total - 1) / (n - 1))
+    );
+}
+
+/**
+ * Calcula las zonas de crossfade suave entre imágenes consecutivas.
+ * Cada zona es un rango [tStart, tEnd] centrado en el punto medio
+ * entre dos keyframes consecutivos.
+ *
+ * Con 4 imgs y 24 frames → 3 zonas de transición:
+ *   Zona 0: imgs[0]→imgs[1]  en t ≈ [0.096, 0.252]
+ *   Zona 1: imgs[1]→imgs[2]  en t ≈ [0.432, 0.568]
+ *   Zona 2: imgs[2]→imgs[3]  en t ≈ [0.748, 0.904]
+ */
+function buildTransitionZones(kf, total) {
+    const T = total - 1;
+    return kf.slice(0, -1).map((posA, i) => {
+        const posB = kf[i + 1];
+        const tA = posA / T, tB = posB / T;
+        const mid = (tA + tB) / 2;
+        const hw  = (tB - tA) * CONFIG.transitionWidth / 2;
+        return { imgA: i, imgB: i + 1, tStart: mid - hw, tEnd: mid + hw };
+    });
+}
+
+/* Funciones de easing */
+const ease = {
+    inOut: t => 0.5 - 0.5 * Math.cos(t * Math.PI),  // Suave en/out para crossfades
+    bell:  t => Math.sin(t * Math.PI),                // Campana para blur de movimiento
+    zoom:  t => Math.pow(t, CONFIG.zoomEasePower),    // Power curve para zoom de cámara
+};
+
+/**
+ * Calcula todos los parámetros de render para t ∈ [0,1].
+ *   t = 0.0 → Frame 01 (exterior, inicio)
+ *   t = 0.5 → Frame 13 (umbral, mitad del recorrido)
+ *   t = 1.0 → Frame 24 (interior, llegada)
+ */
+function getFrameParams(t) {
+    const tc    = Math.max(0, Math.min(1, t));
+    const zones = CONFIG._zones;
+
+    // ── Determinar qué imágenes mezclar y con qué alpha ─────────
+    let imgA = 0, imgB = 0, alpha = 0, inZone = false;
+    for (const z of zones) {
+        if (tc >= z.tStart && tc <= z.tEnd) {
+            const lt = (tc - z.tStart) / (z.tEnd - z.tStart);
+            imgA = z.imgA; imgB = z.imgB; alpha = ease.inOut(lt);
+            inZone = true; break;
+        }
+    }
+    if (!inZone) {
+        // Fuera de zona de transición → imagen pura del segmento actual
+        let idx = 0;
+        for (const z of zones) { if (tc > z.tEnd) idx = z.imgB; }
+        imgA = imgB = idx; alpha = 0;
+    }
+
+    // ── Blur de movimiento: campana en cada zona de transición ───
+    let blur = 0;
+    for (const z of zones) {
+        if (tc >= z.tStart && tc <= z.tEnd) {
+            const lt = (tc - z.tStart) / (z.tEnd - z.tStart);
+            blur = Math.max(blur, ease.bell(lt) * CONFIG.maxBlurPx);
+        }
+    }
+
+    // ── Destello de luz en el pico de cada transición ───────────
+    // Simula el "lens flare" al cruzar un umbral de luz
+    let flash = 0;
+    for (const z of zones) {
+        const mid = (z.tStart + z.tEnd) / 2;
+        const d   = Math.abs(tc - mid);
+        if (d < 0.04) flash = Math.max(flash, (1 - d / 0.04) * CONFIG.flashBoostPeak);
+    }
+
+    // ── Parámetros fotográficos (todos suavemente progresivos) ───
+    return {
+        imgA, imgB, alpha,
+        zoom:       1.0 + (CONFIG.maxZoom - 1.0) * ease.zoom(tc),    // Cámara avanzando
+        brightness: 1.0 + CONFIG.maxBrightnessBoost * tc + flash,     // Luz del interior
+        saturation: 1.0 + CONFIG.maxSatBoost * tc,                    // Neones más vivos
+        contrast:   1.0 + CONFIG.maxContrast * tc,                    // Drama cinematográfico
+        blur,
+        vignette:   0.28 + 0.35 * tc,                                 // Bordes oscuros
+    };
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MOTOR CANVAS — Renderizado GPU de alta calidad
+══════════════════════════════════════════════════════════════════ */
+const CINEMA = {
+    canvas:   null,
+    ctx:      null,
+    dpr:      Math.min(window.devicePixelRatio || 1, 2), // Cap 2 para rendimiento
+    images:   [],
+    progress: { value: 0 },   // Controlado por GSAP (0=inicio, 1=final)
+    lastT:    -1,              // Para skip de frames sin cambio
+
+    init() {
+        this.canvas = document.getElementById('cinema-canvas');
+        // alpha:false → no compositar transparencia → mejor rendimiento
+        this.ctx = this.canvas.getContext('2d', { alpha: false, willReadFrequently: false });
+        this.ctx.imageSmoothingEnabled  = true;
+        this.ctx.imageSmoothingQuality  = 'high';
+        this.resize();
+    },
+
+    resize() {
+        const W = window.innerWidth, H = window.innerHeight;
+        this.canvas.style.width  = W + 'px';
+        this.canvas.style.height = H + 'px';
+        this.canvas.width  = W * this.dpr;
+        this.canvas.height = H * this.dpr;
+        // setTransform en lugar de scale para evitar compounding tras múltiples resize
+        this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+        this.render(true);
+    },
+
+    /**
+     * Dibuja una imagen en modo CSS "cover": llena el canvas
+     * manteniendo proporciones, centrada, con el zoom dado.
+     * zoom=1.0 → sin zoom · zoom=1.65 → 65% más grande (centrado)
+     */
+    drawCover(img, zoom) {
+        const { ctx, canvas, dpr } = this;
+        const W  = canvas.width  / dpr;
+        const H  = canvas.height / dpr;
+        const iw = img.naturalWidth  || 1;
+        const ih = img.naturalHeight || 1;
+        const s  = Math.max(W / iw, H / ih) * zoom;  // escala cover + zoom
+        const dw = iw * s, dh = ih * s;
+        ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    },
+
+    /**
+     * Render principal — invocado por gsap.ticker() cada frame.
+     * Algoritmo:
+     *   1. Saltar si el progreso no ha cambiado (optimización GPU)
+     *   2. Limpiar con fondo negro
+     *   3. Dibujar imgA con blur de movimiento
+     *   4. Dibujar imgB sobre imgA con alpha de crossfade (si aplica)
+     *   5. Aplicar filtros CSS (brightness/saturation/contrast) via GPU
+     *   6. Actualizar vignette y HUD
+     */
+    render(force = false) {
+        const t = this.progress.value;
+        if (!force && Math.abs(t - this.lastT) < 0.0004) return;
+        this.lastT = t;
+        if (!this.images.length) return;
+
+        const p   = getFrameParams(t);
+        const ctx = this.ctx;
+        const W   = this.canvas.width  / this.dpr;
+        const H   = this.canvas.height / this.dpr;
+
+        // Fondo negro opaco (sin transparencia gracias a alpha:false)
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, W, H);
+
+        // ── Imagen base (imgA) con blur de movimiento ────────────
+        const imgA = this.images[Math.min(p.imgA, this.images.length - 1)];
+        if (imgA) {
+            ctx.filter     = p.blur > 0.15 ? `blur(${p.blur.toFixed(1)}px)` : 'none';
+            ctx.globalAlpha = 1;
+            this.drawCover(imgA, p.zoom);
+        }
+
+        // ── Imagen de mezcla (imgB) — sólo durante crossfades ────
+        if (p.alpha > 0.005 && p.imgB !== p.imgA) {
+            const imgB = this.images[Math.min(p.imgB, this.images.length - 1)];
+            if (imgB) {
+                // imgB con blur ligeramente menor (la cámara "focaliza" en el destino)
+                ctx.filter     = p.blur > 0.15 ? `blur(${(p.blur * 0.6).toFixed(1)}px)` : 'none';
+                ctx.globalAlpha = p.alpha;
+                this.drawCover(imgB, p.zoom);
+            }
+        }
+
+        // Reset de estado canvas
+        ctx.filter     = 'none';
+        ctx.globalAlpha = 1;
+
+        // ── Post-proceso via CSS filter (GPU-acelerado) ──────────
+        // Más eficiente que aplicarlo vía ctx.filter al drawImage
+        this.canvas.style.filter = [
+            `brightness(${p.brightness.toFixed(3)})`,
+            `saturate(${p.saturation.toFixed(3)})`,
+            `contrast(${p.contrast.toFixed(3)})`,
+        ].join(' ');
+
+        // ── Intensidad de viñeta ─────────────────────────────────
+        const vigEl = document.getElementById('vignette-overlay');
+        if (vigEl) vigEl.style.opacity = p.vignette.toFixed(3);
+
+        // ── Actualizar HUD ───────────────────────────────────────
+        this._updateHUD(t);
+    },
+
+    _updateHUD(t) {
+        // Número de frame virtual actual (1-24)
+        const fn = Math.min(Math.round(t * (CONFIG.totalFrames - 1)) + 1, CONFIG.totalFrames);
+        const pad = n => String(n).padStart(2, '0');
+
+        const fillEl   = document.getElementById('hud-track-fill');
+        const infoEl   = document.getElementById('hud-frame-info');
+        const phaseEl  = document.getElementById('hud-phase');
+        const phaseBtm = document.getElementById('hud-phase-btm');
+
+        if (fillEl)  fillEl.style.width = (t * 100).toFixed(1) + '%';
+        if (infoEl)  infoEl.textContent =
+            `FRAME ${pad(fn)} / ${CONFIG.totalFrames}  ·  PROXIMIDAD ${Math.round(t * 100)}%`;
+
+        const phase = t < 0.02 ? '◉ EN ESPERA' : t > 0.96 ? '■ DENTRO' : '▶ ENTRANDO';
+        if (phaseEl)  phaseEl.textContent  = phase;
+        if (phaseBtm) phaseBtm.textContent =
+            t < 0.02 ? '◉ SCROLL PARA ENTRAR' :
+            t > 0.96 ? '■ ACCESO COMPLETADO'  :
+                       `▶ ${Math.round(t * 100)}% DEL RECORRIDO`;
+
+        // Activar puntos de keyframe al alcanzar su transición
+        if (CONFIG._zones) {
+            CONFIG._zones.forEach((z, i) => {
+                const dot = document.getElementById(`hud-dot-${i}`);
+                if (dot) dot.classList.toggle('active', t >= (z.tStart + z.tEnd) / 2);
+            });
+        }
+    },
+};
+
+/* ══════════════════════════════════════════════════════════════════
+   UTILIDADES
+══════════════════════════════════════════════════════════════════ */
+
+/** Carga una imagen con manejo de error limpio */
+function loadImg(src) {
+    return new Promise(resolve => {
+        const img = new Image();
+        img.onload  = () => resolve(img);
+        img.onerror = () => { console.warn('⚠ No cargó:', src); resolve(null); };
+        img.src = src;
+    });
+}
+
+/** Carga todas las imágenes secuencialmente con callback de progreso real */
+async function loadAllImages(onProgress) {
+    const all = CONFIG.images;
+    const out = [];
+    for (let i = 0; i < all.length; i++) {
+        out.push(await loadImg(all[i]));
+        if (onProgress) onProgress(i + 1, all.length);
+    }
+    return out.filter(Boolean);
+}
+
+/** Genera textura de grano cinematográfico (noise RGBA en canvas → PNG) */
+function makeGrain() {
+    const s = 512, c = document.createElement('canvas');
+    c.width = c.height = s;
+    const g = c.getContext('2d'), d = g.createImageData(s, s);
+    for (let i = 0; i < d.data.length; i += 4) {
+        const v = (Math.random() * 255) | 0;
+        d.data[i] = d.data[i+1] = d.data[i+2] = v;
+        d.data[i+3] = ((Math.random() * 18) + 4) | 0;
+    }
+    g.putImageData(d, 0, 0);
+    return c.toDataURL('image/png');
+}
+
+/** Inyecta puntos de transición en la barra de progreso HUD */
+function buildHUDDots(zones) {
+    const container = document.getElementById('hud-dot-container');
+    if (!container) return;
+    container.innerHTML = zones.map((z, i) => {
+        const pct = (((z.tStart + z.tEnd) / 2) * 100).toFixed(2);
+        return `<div class="hud-dot" id="hud-dot-${i}" style="left:${pct}%" title="Transición ${i+1}"></div>`;
+    }).join('');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   GSAP — Animación sincronizada con scroll + animaciones de contenido
+══════════════════════════════════════════════════════════════════ */
+function setupGSAP() {
+    gsap.registerPlugin(ScrollTrigger);
+    history.scrollRestoration = 'manual';
+    window.scrollTo(0, 0);
+
+    const contentEl = document.getElementById('content');
+
+    /*
+     * Anima CINEMA.progress.value de 0 a 1 scrubbeado al scroll.
+     * GSAP pina #scene durante todo el espacio de scrollAmount,
+     * y el ticker llama a CINEMA.render() para dibujar el frame correcto.
+     *
+     * #content permanece con opacity:0 (ver CSS) durante todo el
+     * recorrido cinemático y SOLO se revela — con un fundido — al
+     * completarse el pin, es decir, justo al "llegar al interior
+     * de la tienda". Si el usuario vuelve a subir por encima de esa
+     * zona, se oculta otra vez para mantener la coherencia.
+     */
+    gsap.to(CINEMA.progress, {
+        value: 1,
+        ease: 'none',
+        scrollTrigger: {
+            trigger:       '#scene',
+            start:         'top top',
+            end:           `+=${CONFIG.scrollAmount}`,
+            scrub:         CONFIG.scrubValue,
+            pin:           true,
+            pinSpacing:    true,
+            anticipatePin: 1,
+
+            onUpdate(self) {
+                // Barra de progreso superior
+                document.getElementById('progress-bar').style.width =
+                    (self.progress * 100).toFixed(1) + '%';
+                // Ocultar hint de scroll al empezar a desplazar
+                const hint = document.getElementById('scroll-hint');
+                if (hint) hint.style.opacity = self.progress < 0.03 ? '1' : '0';
+            },
+            onLeave() {
+                // Animación completada (t=1) → revelar contenido con transición
+                // y mostrar botones flotantes
+                if (contentEl) contentEl.classList.add('is-visible');
+                document.querySelectorAll('.f-btn').forEach(b => b.classList.add('show'));
+            },
+            onEnterBack() {
+                // Usuario volvió hacia arriba, antes de completar el recorrido
+                // → ocultar contenido y botones otra vez
+                if (contentEl) contentEl.classList.remove('is-visible');
+                document.querySelectorAll('.f-btn').forEach(b => b.classList.remove('show'));
+            },
+        }
+    });
+
+    // GSAP ticker → render de canvas en cada frame del navegador (60fps)
+    gsap.ticker.add(() => CINEMA.render());
+
+    // ── Animaciones de las secciones de contenido ────────────────
+    gsap.from('#sec-welcome > *', {
+        opacity:0, y:22, duration:.8, stagger:.12, ease:'power2.out',
+        scrollTrigger: { trigger:'#sec-welcome', start:'top 82%' }
+    });
+    gsap.to('.prod-card', {
+        opacity:1, y:0, duration:.5, stagger:.07, ease:'back.out(1.6)',
+        scrollTrigger: { trigger:'#grid-products', start:'top 82%' }
+    });
+    gsap.from('.info-block', {
+        opacity:0, y:28, duration:.7, stagger:.14, ease:'power2.out',
+        scrollTrigger: { trigger:'#sec-info', start:'top 80%' }
+    });
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   INIT — Orquesta el arranque completo de la aplicación
+══════════════════════════════════════════════════════════════════ */
+async function init() {
+
+    // 1. Grano cinematográfico procedural (antes de mostrar nada)
+    const grainEl = document.getElementById('grain-overlay');
+    if (grainEl) grainEl.style.backgroundImage = `url(${makeGrain()})`;
+
+    // 2. Calcular mapa de keyframes y zonas de transición
+    const n   = CONFIG.images.length;
+    const kf  = buildKeyframeMap(n, CONFIG.totalFrames);
+    const zn  = buildTransitionZones(kf, CONFIG.totalFrames);
+    CONFIG._kf    = kf;
+    CONFIG._zones = zn;
+
+    console.log(`🎬 Motor 24 frames | ${n} imágenes reales → posiciones: [${kf.join(', ')}]`);
+    console.log(`🔄 ${zn.length} zonas de transición calculadas`);
+
+    // 3. Inyectar puntos HUD (antes de cargar imágenes para que aparezcan rápido)
+    buildHUDDots(zn);
+
+    // 4. Cargar imágenes con progreso real visible en el loader
+    const fillEl  = document.getElementById('ld-fill');
+    const countEl = document.getElementById('ld-count');
+
+    // Promise.all para cargar imágenes Y garantizar tiempo mínimo de loader (900ms)
+    const [images] = await Promise.all([
+        loadAllImages((loaded, total) => {
+            if (fillEl)  fillEl.style.width      = Math.round(loaded / total * 100) + '%';
+            if (countEl) countEl.textContent = `Cargando imagen ${loaded} de ${total}...`;
+        }),
+        new Promise(r => setTimeout(r, 900)),
+    ]);
+
+    CINEMA.images = images;
+    console.log(`✅ ${images.length} imágenes cargadas correctamente`);
+
+    // 5. Inicializar canvas y hacer el primer render
+    CINEMA.init();
+
+    // 6. Ocultar loader con fade suave
+    const loader = document.getElementById('loader');
+    if (loader) {
+        loader.style.opacity = '0';
+        setTimeout(() => (loader.style.display = 'none'), 650);
+    }
+
+    // 7. Activar animación GSAP scrubbeada al scroll
+    setupGSAP();
+
+    // 8. Botón WhatsApp
+    const btnWa = document.getElementById('btn-wa');
+    if (btnWa) btnWa.href = `https://wa.me/${CONFIG.whatsappNumber}`;
+
+    // 9. Generación del código QR
+    const qrEl = document.getElementById('qrcode-el');
+    if (qrEl) {
+        try {
+            new QRCode(qrEl, {
+                text:         CONFIG.qrUrl,
+                width:        160, height: 160,
+                colorDark:    '#00e5ff',
+                colorLight:   '#010810',
+                correctLevel: QRCode.CorrectLevel.H,
+            });
+        } catch (e) {
+            qrEl.innerHTML = `<a href="${CONFIG.qrUrl}" target="_blank" rel="noopener"
+                style="color:#00e5ff;font-size:.75rem;word-break:break-all">${CONFIG.qrUrl}</a>`;
+        }
+    }
+    const urlEl = document.getElementById('qr-url-display');
+    if (urlEl) urlEl.textContent = CONFIG.qrUrl.replace(/^https?:\/\//, '');
+
+    // 10. Marquee de marcas (duplicar para loop infinito)
+    const marquee = document.getElementById('brands-marquee');
+    if (marquee) {
+        const html = CONFIG.brands.map(b => `<span class="brand-pill">${b}</span>`).join('');
+        marquee.innerHTML = html + html;
+    }
+
+    // 11. Manejo de resize y orientación (debounced)
+    let rTimer;
+    const onResize = () => {
+        clearTimeout(rTimer);
+        rTimer = setTimeout(() => {
+            CINEMA.resize();
+            if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+        }, 200);
+    };
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', () => setTimeout(onResize, 400));
+}
+
+/* ── Arrancar cuando el DOM esté listo ─────────────────────────── */
+document.addEventListener('DOMContentLoaded', init);
+</script>
+
+</body>
+</html>
