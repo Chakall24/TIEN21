@@ -255,6 +255,17 @@
     .qr-label { font-family:var(--f-display); font-size:.45rem; letter-spacing:.3em; color:var(--cyan); text-align:center; }
     .qr-url   { font-size:.68rem; color:rgba(224,247,250,.25); text-align:center; word-break:break-all; max-width:180px; }
 
+    /* Botón de reseñas (reemplaza al QR, va encima del mapa) */
+    .review-btn {
+        display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
+        font-family:var(--f-display); font-size:.6rem; letter-spacing:.16em; font-weight:700;
+        color:var(--bg); background:linear-gradient(90deg,var(--cyan),#00b8d4);
+        padding:.85rem 1.1rem; border-radius:6px; text-decoration:none; text-align:center;
+        box-shadow:var(--glow-cyan); margin-bottom:1rem;
+        transition:transform .2s var(--ease-out), box-shadow .2s;
+    }
+    .review-btn:hover { transform:translateY(-2px); box-shadow:0 0 26px rgba(0,229,255,.55); }
+
     /* Footer */
     footer { padding:3rem 1.5rem; text-align:center; border-top:1px solid rgba(0,229,255,.06); display:flex; flex-direction:column; align-items:center; gap:.45rem; }
     .ft-logo { font-family:var(--f-display); font-size:.62rem; letter-spacing:.3em; color:var(--cyan); text-shadow:var(--glow-cyan); }
@@ -393,18 +404,9 @@
                     <li>✉️ roberto.cebrian@telefonica.net</li>
                 </ul>
             </div>
-            <div class="info-block">
-                <h3 style="text-align:center">Escaneanos</h3>
-                <div class="qr-wrap">
-                    <div class="qr-box">
-                        <div id="qrcode-el" aria-label="Código QR de contacto"></div>
-                        <div class="qr-label">Escanea y valoranos</div>
-                        <div class="qr-url" id="qr-url-display"></div>
-                    </div>
-                </div>
-            </div>
             <div class="info-block" style="display: flex; flex-direction: column;">
             <h3>Cómo llegar</h3>
+            <a class="review-btn" id="btn-reviews" href="#" target="_blank" rel="noopener">⭐ Valóranos en Google</a>
             <div class="map-wrap" style="width: 100%; flex-grow: 1; min-height: 220px; overflow: hidden; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.3);">
                 <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3004.0294369916655!2d-4.487985999999999!3d41.155708999999995!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xd40d37856a11643%3A0xd0ca253bf41aea92!2sTien21%20Electro.%20Cebri%C3%A1n!5e0!3m2!1ses!2ses!4v1784205360186!5m2!1ses!2ses" 
                     width="600" 
@@ -990,24 +992,9 @@ async function init() {
     const btnWa = document.getElementById('btn-wa');
     if (btnWa) btnWa.href = `https://wa.me/${CONFIG.whatsappNumber}`;
 
-    // 10. Generación del código QR
-    const qrEl = document.getElementById('qrcode-el');
-    if (qrEl) {
-        try {
-            new QRCode(qrEl, {
-                text:         CONFIG.qrUrl,
-                width:        160, height: 160,
-                colorDark:    '#00e5ff',
-                colorLight:   '#010810',
-                correctLevel: QRCode.CorrectLevel.H,
-            });
-        } catch (e) {
-            qrEl.innerHTML = `<a href="${CONFIG.qrUrl}" target="_blank" rel="noopener"
-                style="color:#00e5ff;font-size:.75rem;word-break:break-all">${CONFIG.qrUrl}</a>`;
-        }
-    }
-    const urlEl = document.getElementById('qr-url-display');
-    if (urlEl) urlEl.textContent = CONFIG.qrUrl.replace(/^https?:\/\//, '');
+    // 10. Botón de reseñas (reemplaza al QR, enlaza a la URL de Google configurada en CONFIG.qrUrl)
+    const btnReviews = document.getElementById('btn-reviews');
+    if (btnReviews) btnReviews.href = CONFIG.qrUrl;
 
     // 11. Marquee de marcas (duplicar para loop infinito)
     const marquee = document.getElementById('brands-marquee');
