@@ -1,30 +1,15 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="is-loading">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Elect. Cebrián | TIEN 21 — Electrónica y Electrodomésticos</title>
     <meta name="description" content="Elect. Cebrián, distribuidor oficial TIEN 21 en Tomelloso. Televisores, electrodomésticos, audio, telefonía e informática con servicio técnico propio.">
 
-    <!--
-    ╔═══════════════════════════════════════════════════════════════╗
-    ║  INSTRUCCIONES DE DESPLIEGUE                                 ║
-    ║                                                               ║
-    ║  Pon estas 4 imágenes EN LA MISMA CARPETA que este HTML:     ║
-    ║    • definitiva.png                       ← Keyframe real 1  ║
-    ║    • Gemini_Generated_Image_7dwu7k...     ← Keyframe real 2  ║
-    ║    • Gemini_Generated_Image_7dwu7k__1_... ← Keyframe real 3  ║
-    ║    • Gemini_Generated_Image_7dwu7k__2_... ← Keyframe real 4  ║
-    ║                                                               ║
-    ║  AÑADIR MÁS FRAMES: edita CONFIG.images en el bloque <script>║
-    ║  El motor redistribuye todo automáticamente hasta 24 imágenes ║
-    ╚═══════════════════════════════════════════════════════════════╝
-    -->
-
-    <link rel="preload" as="image" href="definitiva.png">
-    <link rel="preload" as="image" href="Gemini_Generated_Image_7dwu7k7dwu7k7dwu.png">
-    <link rel="preload" as="image" href="Gemini_Generated_Image_7dwu7k7dwu7k7dwu__1_.png">
-    <link rel="preload" as="image" href="Gemini_Generated_Image_7dwu7k7dwu7k7dwu__2_.png">
+    <!-- Precargamos sólo los primeros frames reales (los que se ven nada más entrar) -->
+    <link rel="preload" as="image" href="fotograma-2.png">
+    <link rel="preload" as="image" href="fotograma-3.png">
+    <link rel="preload" as="image" href="fotograma-4.png">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -50,6 +35,10 @@
     *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
     html { font-size:16px; -webkit-font-smoothing:antialiased; scroll-behavior:smooth; }
     body { background:var(--bg); color:var(--text); font-family:var(--f-body); overflow-x:hidden; line-height:1.6; }
+    /* Mientras los frames se cargan/decodifican, el scroll queda bloqueado.
+       Así evitamos que ScrollTrigger arranque con imágenes a medio cargar
+       (causa típica de saltos y lag al empezar el recorrido). */
+    html.is-loading, html.is-loading body { overflow:hidden !important; height:100%; touch-action:none; overscroll-behavior:none; }
 
     /* ═══ LOADER ═════════════════════════════════════════════════ */
     #loader {
@@ -607,6 +596,7 @@ const CINEMA = {
     ctx:      null,
     dpr:      Math.min(window.devicePixelRatio || 1, 2), // Cap 2 para rendimiento
     images:   [],
+    backdrops: [], // Miniaturas pre-desenfocadas de cada frame (para modo retrato)
     progress: { value: 0 },   // Controlado por GSAP (0=inicio, 1=final)
     lastT:    -1,              // Para skip de frames sin cambio
 
@@ -631,19 +621,61 @@ const CINEMA = {
     },
 
     /**
-     * Dibuja una imagen en modo CSS "cover": llena el canvas
-     * manteniendo proporciones, centrada, con el zoom dado.
-     * zoom=1.0 → sin zoom · zoom=1.65 → 65% más grande (centrado)
+     * Dibuja una imagen en modo CSS "cover" REAL: llena todo el lienzo
+     * recortando el sobrante, sin dejar barras negras. Se usa cuando la
+     * orientación del lienzo (horizontal) es razonablemente parecida a la
+     * de los frames (también horizontales) — típicamente escritorio.
+     * zoom=1.0 → sin zoom extra · zoom=1.65 → 65% más grande (centrado)
      */
-    drawCover(img, zoom) {
+    drawCoverFill(img, zoom) {
         const { ctx, canvas, dpr } = this;
         const W  = canvas.width  / dpr;
         const H  = canvas.height / dpr;
         const iw = img.naturalWidth  || 1;
         const ih = img.naturalHeight || 1;
-        const s  = Math.max(W / iw, H / ih) * zoom;  // escala cover + zoom
+        const s  = Math.max(W / iw, H / ih) * zoom;  // cover real: max, no min
         const dw = iw * s, dh = ih * s;
         ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    },
+
+    /**
+     * Dibuja la imagen COMPLETA sin recortar (modo "contain"), centrada.
+     * Se usa en pantallas verticales (móvil) porque los frames son
+     * horizontales: si se recortara en cover real, en retrato sólo se
+     * vería una franja estrecha del centro y se perdería composición
+     * (fachada, puerta, etc.). Se combina con drawBlurredBackdrop() para
+     * rellenar el espacio sobrante sin barras negras.
+     */
+    drawContainFit(img, zoom) {
+        const { ctx, canvas, dpr } = this;
+        const W  = canvas.width  / dpr;
+        const H  = canvas.height / dpr;
+        const iw = img.naturalWidth  || 1;
+        const ih = img.naturalHeight || 1;
+        const s  = Math.min(W / iw, H / ih) * zoom;  // contain: min
+        const dw = iw * s, dh = ih * s;
+        ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    },
+
+    /**
+     * Rellena todo el lienzo con una versión desenfocada y atenuada del
+     * mismo frame (ya pre-generada y cacheada en cpu, ver makeBackdropCanvas),
+     * a modo de fondo. Evita el "efecto barras negras" cuando la imagen
+     * horizontal se dibuja en modo contain sobre una pantalla vertical.
+     * No usa ctx.filter (coste por frame) porque el desenfoque ya viene
+     * horneado en los píxeles de la miniatura cacheada.
+     */
+    drawBlurredBackdrop(idx, alpha) {
+        const bd = this.backdrops[idx];
+        if (!bd) return;
+        const { ctx, canvas, dpr } = this;
+        const W  = canvas.width  / dpr;
+        const H  = canvas.height / dpr;
+        const s  = Math.max(W / bd.width, H / bd.height) * 1.15; // pequeño extra-zoom: disimula el borde de la miniatura
+        const dw = bd.width * s, dh = bd.height * s;
+        ctx.globalAlpha = alpha * 0.6; // atenuado para que no compita con la imagen nítida
+        ctx.drawImage(bd, (W - dw) / 2, (H - dh) / 2, dw, dh);
+        ctx.globalAlpha = 1;
     },
 
     /**
@@ -671,22 +703,35 @@ const CINEMA = {
         ctx.fillStyle = '#000';
         ctx.fillRect(0, 0, W, H);
 
+        // ── ¿Lienzo en vertical (móvil)? Los frames son horizontales,
+        //    así que en retrato usamos "contain" + fondo desenfocado en
+        //    vez de recortar (cover), para no perder composición ni dejar
+        //    barras negras. En horizontal seguimos con cover real.
+        const isPortrait = H > W;
+        const idxA = Math.min(p.imgA, this.images.length - 1);
+        const idxB = Math.min(p.imgB, this.images.length - 1);
+
+        if (isPortrait) {
+            this.drawBlurredBackdrop(idxA, 1);
+            if (p.alpha > 0.005 && idxB !== idxA) this.drawBlurredBackdrop(idxB, p.alpha);
+        }
+
         // ── Imagen base (imgA) con blur de movimiento ────────────
-        const imgA = this.images[Math.min(p.imgA, this.images.length - 1)];
+        const imgA = this.images[idxA];
         if (imgA) {
             ctx.filter     = p.blur > 0.15 ? `blur(${p.blur.toFixed(1)}px)` : 'none';
             ctx.globalAlpha = 1;
-            this.drawCover(imgA, p.zoom);
+            if (isPortrait) this.drawContainFit(imgA, p.zoom); else this.drawCoverFill(imgA, p.zoom);
         }
 
         // ── Imagen de mezcla (imgB) — sólo durante crossfades ────
-        if (p.alpha > 0.005 && p.imgB !== p.imgA) {
-            const imgB = this.images[Math.min(p.imgB, this.images.length - 1)];
+        if (p.alpha > 0.005 && idxB !== idxA) {
+            const imgB = this.images[idxB];
             if (imgB) {
                 // imgB con blur ligeramente menor (la cámara "focaliza" en el destino)
                 ctx.filter     = p.blur > 0.15 ? `blur(${(p.blur * 0.6).toFixed(1)}px)` : 'none';
                 ctx.globalAlpha = p.alpha;
-                this.drawCover(imgB, p.zoom);
+                if (isPortrait) this.drawContainFit(imgB, p.zoom); else this.drawCoverFill(imgB, p.zoom);
             }
         }
 
@@ -745,14 +790,38 @@ const CINEMA = {
    UTILIDADES
 ══════════════════════════════════════════════════════════════════ */
 
-/** Carga una imagen con manejo de error limpio */
+/** Carga una imagen con manejo de error limpio, esperando el decode()
+ *  completo (si el navegador lo soporta) para que el primer dibujo en
+ *  canvas no tenga que decodificar sobre la marcha (evita jank). */
 function loadImg(src) {
     return new Promise(resolve => {
         const img = new Image();
-        img.onload  = () => resolve(img);
+        img.onload = async () => {
+            if (img.decode) { try { await img.decode(); } catch (e) {} }
+            resolve(img);
+        };
         img.onerror = () => { console.warn('⚠ No cargó:', src); resolve(null); };
         img.src = src;
     });
+}
+
+/** Genera una miniatura desenfocada de un frame (una sola vez, en CPU y a
+ *  muy baja resolución) para usarla como fondo cuando el lienzo está en
+ *  formato retrato — evita las barras negras del modo "contain". */
+function makeBackdropCanvas(img) {
+    try {
+        const bw = 48;
+        const bh = Math.max(1, Math.round(bw * (img.naturalHeight / img.naturalWidth)));
+        const c = document.createElement('canvas');
+        c.width = bw; c.height = bh;
+        const g = c.getContext('2d');
+        g.filter = 'blur(3px)';
+        g.drawImage(img, 0, 0, bw, bh);
+        return c;
+    } catch (e) {
+        console.warn('⚠ No se pudo generar fondo desenfocado:', e);
+        return null;
+    }
 }
 
 /** Carga todas las imágenes secuencialmente con callback de progreso real */
@@ -900,26 +969,40 @@ async function init() {
     ]);
 
     CINEMA.images = images;
-    console.log(`✅ ${images.length} imágenes cargadas correctamente`);
+    // Generamos, una sola vez y ya con todas las imágenes decodificadas,
+    // un fondo desenfocado por frame (se usa en pantallas verticales,
+    // ver drawBlurredBackdrop). Es barato: son miniaturas de 48px.
+    CINEMA.backdrops = images.map(img => makeBackdropCanvas(img));
+    console.log(`✅ ${images.length} imágenes cargadas, decodificadas y con fondo generado`);
 
     // 5. Inicializar canvas y hacer el primer render
     CINEMA.init();
 
-    // 6. Ocultar loader con fade suave
+    // 6. Montar la animación GSAP scrubbeada al scroll. Ojo: el scroll
+    //    real sigue bloqueado (html.is-loading) hasta el paso 7, así que
+    //    ScrollTrigger se calcula/posiciona con calma, sin que el usuario
+    //    pueda desplazarse a medias y provocar saltos.
+    setupGSAP();
+    CINEMA.render(true);
+
+    // 7. Todo cargado, decodificado y montado → desbloqueamos el scroll.
+    //    Este es el punto clave para evitar lag: el recorrido cinemático
+    //    sólo puede empezar cuando ya no hay nada pendiente de cargar.
+    document.documentElement.classList.remove('is-loading');
+    if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+
+    // 8. Ocultar loader con fade suave
     const loader = document.getElementById('loader');
     if (loader) {
         loader.style.opacity = '0';
         setTimeout(() => (loader.style.display = 'none'), 650);
     }
 
-    // 7. Activar animación GSAP scrubbeada al scroll
-    setupGSAP();
-
-    // 8. Botón WhatsApp
+    // 9. Botón WhatsApp
     const btnWa = document.getElementById('btn-wa');
     if (btnWa) btnWa.href = `https://wa.me/${CONFIG.whatsappNumber}`;
 
-    // 9. Generación del código QR
+    // 10. Generación del código QR
     const qrEl = document.getElementById('qrcode-el');
     if (qrEl) {
         try {
@@ -938,14 +1021,14 @@ async function init() {
     const urlEl = document.getElementById('qr-url-display');
     if (urlEl) urlEl.textContent = CONFIG.qrUrl.replace(/^https?:\/\//, '');
 
-    // 10. Marquee de marcas (duplicar para loop infinito)
+    // 11. Marquee de marcas (duplicar para loop infinito)
     const marquee = document.getElementById('brands-marquee');
     if (marquee) {
         const html = CONFIG.brands.map(b => `<span class="brand-pill">${b}</span>`).join('');
         marquee.innerHTML = html + html;
     }
 
-    // 11. Manejo de resize y orientación (debounced)
+    // 12. Manejo de resize y orientación (debounced)
     let rTimer;
     const onResize = () => {
         clearTimeout(rTimer);
