@@ -210,7 +210,18 @@
         width:1px; height:60px; background:linear-gradient(to bottom,var(--cyan),transparent); opacity:.45;
     }
     .wl-eyebrow { font-family:var(--f-display); font-size:.52rem; letter-spacing:.5em; color:var(--red); text-shadow:var(--glow-red); margin-bottom:.9rem; }
-    #sec-welcome h1 { font-family:var(--f-display); font-size:clamp(2.4rem,8vw,5rem); font-weight:900; color:var(--cyan); text-shadow:var(--glow-cyan); letter-spacing:.04em; line-height:1; margin-bottom:.4rem; }
+    #sec-welcome h1 {
+        font-family:var(--f-display);
+        font-size:clamp(1.8rem,7vw,5rem);
+        font-weight:900;
+        color:var(--cyan);
+        text-shadow:var(--glow-cyan);
+        letter-spacing:.02em;
+        line-height:1.15;
+        margin-bottom:.4rem;
+        max-width:100%;
+        overflow-wrap:break-word;
+    }
     .wl-brand   { font-family:var(--f-display); font-size:clamp(.5rem,1.8vw,.78rem); letter-spacing:.35em; color:var(--red); text-shadow:var(--glow-red); margin-bottom:2.25rem; }
     #sec-welcome p { max-width:520px; font-size:clamp(.88rem,2vw,1rem); color:var(--text); font-weight:300; line-height:1.9; }
 
@@ -639,22 +650,14 @@ const CINEMA = {
      */
     drawContainFit(img, zoom) {
         const { ctx, canvas, dpr } = this;
-        const W  = canvas.width / dpr;
+        const W  = canvas.width  / dpr;
         const H  = canvas.height / dpr;
-        const iw = img.naturalWidth || 1;
+        const iw = img.naturalWidth  || 1;
         const ih = img.naturalHeight || 1;
-
-        const contain = Math.min(W / iw, H / ih);
-        const cover   = Math.max(W / iw, H / ih);
-
-        // 0 = contain, 1 = cover
-        const s = (contain + (cover - contain) * 0.1) * zoom;
-
-        const dw = iw * s;
-        const dh = ih * s;
-
+        const s  = Math.min(W / iw, H / ih) * zoom;  // contain: min
+        const dw = iw * s, dh = ih * s;
         ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
-    }
+    },
 
     /**
      * Rellena todo el lienzo con una versión desenfocada y atenuada del
