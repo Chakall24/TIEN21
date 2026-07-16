@@ -621,30 +621,12 @@ const CINEMA = {
     },
 
     /**
-     * Dibuja una imagen en modo CSS "cover" REAL: llena todo el lienzo
-     * recortando el sobrante, sin dejar barras negras. Se usa cuando la
-     * orientación del lienzo (horizontal) es razonablemente parecida a la
-     * de los frames (también horizontales) — típicamente escritorio.
-     * zoom=1.0 → sin zoom extra · zoom=1.65 → 65% más grande (centrado)
-     */
-    drawCoverFill(img, zoom) {
-        const { ctx, canvas, dpr } = this;
-        const W  = canvas.width  / dpr;
-        const H  = canvas.height / dpr;
-        const iw = img.naturalWidth  || 1;
-        const ih = img.naturalHeight || 1;
-        const s  = Math.max(W / iw, H / ih) * zoom;  // cover real: max, no min
-        const dw = iw * s, dh = ih * s;
-        ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
-    },
-
-    /**
      * Dibuja la imagen COMPLETA sin recortar (modo "contain"), centrada.
-     * Se usa en pantallas verticales (móvil) porque los frames son
-     * horizontales: si se recortara en cover real, en retrato sólo se
-     * vería una franja estrecha del centro y se perdería composición
-     * (fachada, puerta, etc.). Se combina con drawBlurredBackdrop() para
-     * rellenar el espacio sobrante sin barras negras.
+     * Se usa SIEMPRE: los frames son horizontales y deben verse enteros
+     * en cualquier pantalla (recortarlos —modo "cover"— perdería parte
+     * de la composición: fachada, puerta, etc.). Se combina con
+     * drawBlurredBackdrop() para rellenar el espacio sobrante sin dejar
+     * barras negras.
      */
     drawContainFit(img, zoom) {
         const { ctx, canvas, dpr } = this;
@@ -683,10 +665,11 @@ const CINEMA = {
      * Algoritmo:
      *   1. Saltar si el progreso no ha cambiado (optimización GPU)
      *   2. Limpiar con fondo negro
-     *   3. Dibujar imgA con blur de movimiento
-     *   4. Dibujar imgB sobre imgA con alpha de crossfade (si aplica)
-     *   5. Aplicar filtros CSS (brightness/saturation/contrast) via GPU
-     *   6. Actualizar vignette y HUD
+     *   3. Dibujar el fondo desenfocado del frame (rellena todo el lienzo)
+     *   4. Dibujar imgA ENTERA (contain) con blur de movimiento
+     *   5. Dibujar imgB ENTERA sobre imgA con alpha de crossfade (si aplica)
+     *   6. Aplicar filtros CSS (brightness/saturation/contrast) via GPU
+     *   7. Actualizar vignette y HUD
      */
     render(force = false) {
         const t = this.progress.value;
@@ -703,25 +686,23 @@ const CINEMA = {
         ctx.fillStyle = '#000';
         ctx.fillRect(0, 0, W, H);
 
-        // ── ¿Lienzo en vertical (móvil)? Los frames son horizontales,
-        //    así que en retrato usamos "contain" + fondo desenfocado en
-        //    vez de recortar (cover), para no perder composición ni dejar
-        //    barras negras. En horizontal seguimos con cover real.
-        const isPortrait = H > W;
+        // ── Los frames son horizontales y deben verse SIEMPRE completos,
+        //    sin recortar, sea cual sea la orientación/aspecto de la
+        //    pantalla. Por eso usamos SIEMPRE "contain" (imagen entera,
+        //    centrada) + un fondo desenfocado del mismo frame que rellena
+        //    el espacio sobrante (nunca barras negras).
         const idxA = Math.min(p.imgA, this.images.length - 1);
         const idxB = Math.min(p.imgB, this.images.length - 1);
 
-        if (isPortrait) {
-            this.drawBlurredBackdrop(idxA, 1);
-            if (p.alpha > 0.005 && idxB !== idxA) this.drawBlurredBackdrop(idxB, p.alpha);
-        }
+        this.drawBlurredBackdrop(idxA, 1);
+        if (p.alpha > 0.005 && idxB !== idxA) this.drawBlurredBackdrop(idxB, p.alpha);
 
         // ── Imagen base (imgA) con blur de movimiento ────────────
         const imgA = this.images[idxA];
         if (imgA) {
             ctx.filter     = p.blur > 0.15 ? `blur(${p.blur.toFixed(1)}px)` : 'none';
             ctx.globalAlpha = 1;
-            if (isPortrait) this.drawContainFit(imgA, p.zoom); else this.drawCoverFill(imgA, p.zoom);
+            this.drawContainFit(imgA, p.zoom);
         }
 
         // ── Imagen de mezcla (imgB) — sólo durante crossfades ────
@@ -731,7 +712,7 @@ const CINEMA = {
                 // imgB con blur ligeramente menor (la cámara "focaliza" en el destino)
                 ctx.filter     = p.blur > 0.15 ? `blur(${(p.blur * 0.6).toFixed(1)}px)` : 'none';
                 ctx.globalAlpha = p.alpha;
-                if (isPortrait) this.drawContainFit(imgB, p.zoom); else this.drawCoverFill(imgB, p.zoom);
+                this.drawContainFit(imgB, p.zoom);
             }
         }
 
