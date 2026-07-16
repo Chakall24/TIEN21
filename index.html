@@ -639,14 +639,22 @@ const CINEMA = {
      */
     drawContainFit(img, zoom) {
         const { ctx, canvas, dpr } = this;
-        const W  = canvas.width  / dpr;
+        const W  = canvas.width / dpr;
         const H  = canvas.height / dpr;
-        const iw = img.naturalWidth  || 1;
+        const iw = img.naturalWidth || 1;
         const ih = img.naturalHeight || 1;
-        const s  = Math.min(W / iw, H / ih) * zoom;  // contain: min
-        const dw = iw * s, dh = ih * s;
+
+        const contain = Math.min(W / iw, H / ih);
+        const cover   = Math.max(W / iw, H / ih);
+
+        // 0 = contain, 1 = cover
+        const s = (contain + (cover - contain) * 0.18) * zoom;
+
+        const dw = iw * s;
+        const dh = ih * s;
+
         ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
-    },
+    }
 
     /**
      * Rellena todo el lienzo con una versión desenfocada y atenuada del
