@@ -166,11 +166,10 @@
     }
     .sh-word { font-family:var(--f-display); font-size:.44rem; letter-spacing:.5em; color:var(--cyan); text-shadow:var(--glow-cyan); }
     .sh-arrows { display:flex; flex-direction:column; align-items:center; gap:1px; }
-    .sh-arrow { width:12px; height:12px; border-right:1.5px solid rgba(0,229,255,.8); border-bottom:1.5px solid rgba(0,229,255,.8); transform:rotate(45deg); animation:shPulse 1.4s ease-in-out infinite; }
+    .sh-arrow { width:12px; height:12px; border-right:1.5px solid rgba(0,229,255,.8); border-bottom:1.5px solid rgba(0,229,255,.8); transform:rotate(225deg); animation:shPulse 1.4s ease-in-out infinite; }
+    .sh-arrow:nth-child(1) { animation-delay:.36s; border-color:rgba(0,229,255,.25); }
     .sh-arrow:nth-child(2) { animation-delay:.18s; border-color:rgba(0,229,255,.5); }
-    .sh-arrow:nth-child(3) { animation-delay:.36s; border-color:rgba(0,229,255,.25); }
-    @keyframes shPulse { 0%,100%{transform:rotate(45deg) translate(0,0)} 50%{transform:rotate(45deg) translate(4px,4px)} }
-
+    @keyframes shPulse { 0%,100%{transform:rotate(225deg) translate(0,0)} 50%{transform:rotate(225deg) translate(4px,4px)} }
     /* ═══ BOTONES FLOTANTES ══════════════════════════════════════ */
     .float-group { position:fixed; bottom:1.5rem; right:1.5rem; display:flex; flex-direction:column; gap:.7rem; z-index:500; }
     .f-btn {
