@@ -15,8 +15,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
 
     <style>
     /* ═══ TOKENS DE DISEÑO ═══════════════════════════════════════ */
@@ -798,14 +798,24 @@ function makeBackdropCanvas(img) {
     }
 }
 
-/** Carga todas las imágenes secuencialmente con callback de progreso real */
+/** Carga todas las imágenes EN PARALELO con callback de progreso real.
+ *  Promise.all conserva el orden de salida igual que el array de entrada
+ *  (imprescindible: el motor indexa las imágenes por posición), aunque
+ *  las descargas terminen en cualquier orden. El contador de progreso
+ *  sigue incrementando de 1 a N con cada imagen que termina, exactamente
+ *  igual que antes — sólo cambia que ya no se espera a que cada imagen
+ *  termine para empezar la siguiente. */
 async function loadAllImages(onProgress) {
     const all = CONFIG.images;
-    const out = [];
-    for (let i = 0; i < all.length; i++) {
-        out.push(await loadImg(all[i]));
-        if (onProgress) onProgress(i + 1, all.length);
-    }
+    let loaded = 0;
+    const promises = all.map(src =>
+        loadImg(src).then(img => {
+            loaded++;
+            if (onProgress) onProgress(loaded, all.length);
+            return img;
+        })
+    );
+    const out = await Promise.all(promises);
     return out.filter(Boolean);
 }
 
@@ -845,11 +855,11 @@ function setupGSAP() {
     window.scrollTo(0, 0);
 
     const contentEl = document.getElementById('content');
+    const grainEl   = document.getElementById('grain-overlay');
 
     /*
      * Anima CINEMA.progress.value de 0 a 1 scrubbeado al scroll.
-     * GSAP pina #scene durante todo el espacio de scrollAmount,
-     * y el ticker llama a CINEMA.render() para dibujar el frame correcto.
+     * GSAP pina #scene durante todo el espacio de scrollAmount.
      *
      * #content permanece con opacity:0 (ver CSS) durante todo el
      * recorrido cinemático y SOLO se revela — con un fundido — al
@@ -860,6 +870,14 @@ function setupGSAP() {
     gsap.to(CINEMA.progress, {
         value: 1,
         ease: 'none',
+        // Renderizamos el canvas SÓLO cuando progress.value cambia de
+        // verdad (scroll activo o el "catch-up" del scrub), en vez de
+        // un ticker aparte corriendo 60veces/seg para siempre — antes
+        // esta función se seguía llamando indefinidamente incluso con
+        // la escena ya fuera de pantalla (leyendo la sección de info,
+        // el footer, etc.), robando tiempo de CPU al resto de la
+        // página sin ningún beneficio visual.
+        onUpdate: () => CINEMA.render(),
         scrollTrigger: {
             trigger:       '#scene',
             start:         'top top',
@@ -880,18 +898,21 @@ function setupGSAP() {
                 // y mostrar botones flotantes
                 if (contentEl) contentEl.classList.add('is-visible');
                 document.querySelectorAll('.f-btn').forEach(b => b.classList.add('show'));
+                // La escena ya no es visible (queda por encima del viewport):
+                // pausamos el grano de película para que no siga animándose
+                // (y forzando repintados con mix-blend-mode) sin que se vea.
+                if (grainEl) grainEl.style.animationPlayState = 'paused';
             },
             onEnterBack() {
                 // Usuario volvió hacia arriba, antes de completar el recorrido
                 // → ocultar contenido y botones otra vez
                 if (contentEl) contentEl.classList.remove('is-visible');
                 document.querySelectorAll('.f-btn').forEach(b => b.classList.remove('show'));
+                // La escena vuelve a ser visible → reanudamos el grano
+                if (grainEl) grainEl.style.animationPlayState = 'running';
             },
         }
     });
-
-    // GSAP ticker → render de canvas en cada frame del navegador (60fps)
-    gsap.ticker.add(() => CINEMA.render());
 
     // ── Animaciones de las secciones de contenido ────────────────
     gsap.from('#sec-welcome > *', {
