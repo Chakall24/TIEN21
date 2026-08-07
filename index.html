@@ -264,16 +264,49 @@
     .rv-summary a { color:rgba(0,229,255,.7); text-decoration:none; border-bottom:1px solid rgba(0,229,255,.25); padding-bottom:2px; transition:color .2s,border-color .2s; }
     .rv-summary a:hover { color:var(--cyan); border-color:var(--cyan); }
 
-    /* Rejilla auto-responsive: el navegador decide cuántas columnas caben
-       (mínimo 280px) y pasa de 3 a 2 a 1 sin una sola media query */
-    .reviews-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1.25rem; }
+    /* ── Cinta desplazante ──────────────────────────────────────
+       Misma técnica que la cinta de marcas: el JavaScript escribe las
+       tarjetas DOS VECES seguidas y la animación desplaza exactamente el
+       -50% del ancho total. Cuando ha recorrido la primera copia, en
+       pantalla se ve el principio de la segunda —idéntico píxel a píxel—
+       y el salto de vuelta al origen resulta invisible. */
+    .reviews-marquee-wrap {
+        overflow:hidden;
+        /* Máscara de transparencia: las tarjetas se desvanecen al entrar y
+           salir por los lados en vez de aparecer cortadas contra el borde.
+           Es el detalle que separa una cinta amateur de una profesional. */
+        mask-image:linear-gradient(90deg,transparent,black 7%,black 93%,transparent);
+        -webkit-mask-image:linear-gradient(90deg,transparent,black 7%,black 93%,transparent);
+        opacity:0; transform:translateY(24px);   /* estado inicial; lo revela GSAP */
+    }
+    /* width:max-content = "sé tan ancha como necesites para que TODO quepa en
+       una línea". Sin esto las tarjetas se repartirían en varias filas y no
+       habría nada que desplazar.
+       ⚙️ Los 60s son la velocidad: más segundos = más lento. Está a propósito
+       unas 3 veces más lento que las marcas, porque aquí hay que LEER. Si
+       añades más reseñas, sube también este número o pasarán más deprisa. */
+    .reviews-marquee { display:flex; width:max-content; animation:rvScroll 60s linear infinite; }
+    /* Pausa al pasar el ratón (escritorio) y al mantener pulsado (móvil, donde
+       el hover no existe). No reinicia: congela la cinta donde esté. */
+    .reviews-marquee:hover,
+    .reviews-marquee:active { animation-play-state:paused; }
+    @keyframes rvScroll { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
 
     .review-card {
+        /* Ancho FIJO: dentro de una cinta las tarjetas no pueden ser elásticas.
+           clamp da un ancho fluido acotado — en móvil ocupa el 78% de la
+           pantalla, con lo que se asoma la siguiente y se entiende que hay más. */
+        width:clamp(260px,78vw,340px);
+        flex-shrink:0;              /* impide que el flex las comprima */
+        /* La separación se hace con margin y NO con gap en la cinta. Motivo:
+           con gap, el ancho total sería 2N tarjetas + (2N-1) huecos, y el -50%
+           caería medio hueco desplazado, dejando un salto visible en la costura.
+           Con margin, el total es 2N × (tarjeta + margen) y el -50% cae exacto. */
+        margin-right:1.25rem;
         background:rgba(0,229,255,.035); border:1px solid rgba(0,229,255,.1);
         border-radius:8px; padding:1.5rem 1.35rem;
         display:flex; flex-direction:column; gap:.9rem;
         position:relative; overflow:hidden;
-        opacity:0; transform:translateY(24px);   /* oculta de inicio; la revela GSAP */
         transition:background .25s,border-color .25s,transform .2s;
     }
     /* Barra inferior desplegable: el mismo gesto que .prod-card, para que la
@@ -415,9 +448,12 @@
     <section id="sec-reviews" aria-labelledby="h-reviews">
         <h2 class="sec-head" id="h-reviews">Lo que dicen nuestros clientes</h2>
         <p class="rv-summary" id="rv-summary"></p>
-        <!-- role="list" avisa a los lectores de pantalla de que esto es una
-             lista, ya que los <article> generados no lo son por defecto -->
-        <div class="reviews-grid" id="reviews-grid" role="list"></div>
+        <!-- Ventana de recorte de la cinta. La cinta de dentro está VACÍA:
+             el JavaScript escribe las tarjetas por duplicado (ver
+             renderReviews) para que el bucle no tenga costura. -->
+        <div class="reviews-marquee-wrap">
+            <div class="reviews-marquee" id="reviews-track"></div>
+        </div>
     </section>
 
     <div class="neon-rule"></div>
@@ -574,14 +610,32 @@ const CONFIG = {
         },
         {
             rating: 5,
+            text:   'Mucha variedad y buen servicio. Tenían justo lo que buscaba.',
+            author: 'Beatriz Rodríguez',
+            date:   'Agosto 2026',
+        },
+        {
+            rating: 5,
             text:   'Se me estropeó el frigorífico por la noche, me atendieron a pesar de las horas y al día siguiente YA LO TENÍA!!! Superprofesionales, y muy rápidos. Excelente comunicación. TOTALMENTE RECOMENDABLES 🤩',
             author: 'Carmen Cita',
             date:   'Noviembre 2025',
         },
         {
             rating: 5,
-            text:   'Excelente servicio de entrega de un lavavajillas y no se puede ser más rápido. No es la primera vez que les compramos y siguen siendo líderes en seriedad y cuidado al cliente. Muy contento con la atención recibida. Absolutamente recomendable.',
+            text:   'Tremendamente satisfechos con el establecimiento y aún más con Roberto, su responsable. Formalidad, dedicación, puntualidad y eficacia en una instalación que tenía cierta miga. Un diez!!!',
+            author: 'Pablo Camiña Abajas',
+            date:   'Noviembre 2025',
+        },
+        {
+            rating: 5,
+            text:   'Excelente servicio de entrega de un lavavajillas y no se puede ser más rápido. No es la primera vez que les compramos y siguen siendo líderes en seriedad y cuidado al cliente. Muy contento con la atención recibida.',
             author: 'Eduardo Rincón',
+            date:   'Agosto 2025',
+        },
+        {
+            rating: 5,
+            text:   'Trato inmejorable por parte de Roberto cuando he tenido un problema con una nevera que no compré aquí. Tienda muy recomendable para todo tipo de electrodomésticos.',
+            author: 'Aiitor09',
             date:   'Agosto 2025',
         },
     ],
@@ -961,11 +1015,11 @@ function buildHUDDots(zones) {
  *  petición de red: los textos ya están en el archivo, así que su coste
  *  para el tiempo de carga es cero. */
 function renderReviews() {
-    const grid = document.getElementById('reviews-grid');
-    const sum  = document.getElementById('rv-summary');
+    const track = document.getElementById('reviews-track');
+    const sum   = document.getElementById('rv-summary');
     // Guarda: si falta el HTML o no hay reseñas configuradas, la sección se
     // queda vacía en lugar de romper el arranque de toda la página.
-    if (!grid || !CONFIG.reviews || !CONFIG.reviews.length) return;
+    if (!track || !CONFIG.reviews || !CONFIG.reviews.length) return;
 
     // Escapa los caracteres que el navegador interpretaría como HTML. Hoy los
     // textos los controlas tú, pero en cuanto vengan de un panel o de la API
@@ -981,10 +1035,12 @@ function renderReviews() {
         return '★'.repeat(v) + '☆'.repeat(5 - v);
     };
 
-    // Genera todas las tarjetas y las inserta de UNA sola vez: el navegador
-    // recalcula el diseño una vez en lugar de tres.
-    grid.innerHTML = CONFIG.reviews.map(r => `
-        <article class="review-card" role="listitem">
+    // Construye una tarjeta. El parámetro 'copia' marca los duplicados del
+    // bucle infinito como decorativos: sin eso, un lector de pantalla leería
+    // las 6 reseñas DOS veces seguidas, que es exactamente la clase de ruido
+    // que hace inservible una web con lector de voz.
+    const card = (r, copia) => `
+        <article class="review-card"${copia ? ' aria-hidden="true"' : ''}>
             <div class="rv-stars" role="img" aria-label="${r.rating} de 5 estrellas">${stars(r.rating)}</div>
             <p class="rv-text">${esc(r.text)}</p>
             <div class="rv-foot">
@@ -994,7 +1050,17 @@ function renderReviews() {
                     <span class="rv-source">${esc(r.date)} · EN GOOGLE</span>
                 </span>
             </div>
-        </article>`).join('');
+        </article>`;
+
+    // ★ EL TRUCO DEL BUCLE SIN COSTURA ★
+    // Se escribe la tanda completa DOS VECES. Combinado con la animación CSS
+    // que desplaza exactamente el -50% del ancho, cuando la cinta termina la
+    // primera copia en pantalla se está viendo el principio de la segunda,
+    // que es idéntico, y el salto de vuelta al origen no se percibe. Sin la
+    // duplicación se vería un hueco vacío y un tirón en cada vuelta.
+    // Todo en UNA sola escritura: el navegador recalcula el diseño una vez.
+    track.innerHTML = CONFIG.reviews.map(r => card(r, false)).join('')
+                    + CONFIG.reviews.map(r => card(r, true)).join('');
 
     // toFixed(1) fija un decimal y replace pone la coma decimal española.
     const avgTxt = CONFIG.reviewsAverage.toFixed(1).replace('.', ',');
@@ -1075,11 +1141,12 @@ function setupGSAP() {
         opacity:1, y:0, duration:.5, stagger:.07, ease:'back.out(1.6)',
         scrollTrigger: { trigger:'#grid-products', start:'top 82%' }
     });
-    // Entrada escalonada de las tarjetas de reseña. Se usa gsap.to() y no
-    // from() porque el CSS ya las dejó ocultas y desplazadas: hay que
-    // llevarlas HACIA el estado visible, igual que con .prod-card.
-    gsap.to('.review-card', {
-        opacity:1, y:0, duration:.55, stagger:.09, ease:'power2.out',
+    // Entrada de la cinta de reseñas. Se anima el CONTENEDOR entero, no cada
+    // tarjeta: con 12 tarjetas (6 + sus copias) un escalonado duraría más de
+    // un segundo y, sobre todo, una entrada individual pelearía visualmente
+    // con el desplazamiento horizontal que ya tienen encima.
+    gsap.to('.reviews-marquee-wrap', {
+        opacity:1, y:0, duration:.7, ease:'power2.out',
         scrollTrigger: { trigger:'#sec-reviews', start:'top 82%' }
     });
     gsap.from('.info-block', {
