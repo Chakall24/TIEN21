@@ -247,6 +247,69 @@
     .map-wrap { width:100%; flex-grow:1; min-height:220px; overflow:hidden; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.3); }
     .map-wrap iframe { border:0; }
 
+    /* ═══ RESEÑAS DE GOOGLE ══════════════════════════════════════ */
+    #sec-reviews { padding:5rem 1.5rem; max-width:1080px; margin:0 auto; }
+
+    /* Línea resumen: "4,9 ★★★★★ Ver las 43 reseñas en Google →" */
+    .rv-summary {
+        display:flex; align-items:center; justify-content:center; gap:.7rem;
+        flex-wrap:wrap;                  /* en móvil salta de línea, no desborda */
+        margin:-2.5rem 0 3rem;           /* margen NEGATIVO: sube la línea para pegarla
+                                            al título, que ya trae 3.5rem por debajo */
+        font-family:var(--f-display); font-size:.55rem; letter-spacing:.22em;
+        color:rgba(0,229,255,.45);
+    }
+    /* La nota media es el dato que más pesa: verificable y difícil de falsear */
+    .rv-summary strong { font-size:1.1rem; letter-spacing:.02em; color:var(--cyan); text-shadow:var(--glow-cyan); font-weight:700; }
+    .rv-summary a { color:rgba(0,229,255,.7); text-decoration:none; border-bottom:1px solid rgba(0,229,255,.25); padding-bottom:2px; transition:color .2s,border-color .2s; }
+    .rv-summary a:hover { color:var(--cyan); border-color:var(--cyan); }
+
+    /* Rejilla auto-responsive: el navegador decide cuántas columnas caben
+       (mínimo 280px) y pasa de 3 a 2 a 1 sin una sola media query */
+    .reviews-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1.25rem; }
+
+    .review-card {
+        background:rgba(0,229,255,.035); border:1px solid rgba(0,229,255,.1);
+        border-radius:8px; padding:1.5rem 1.35rem;
+        display:flex; flex-direction:column; gap:.9rem;
+        position:relative; overflow:hidden;
+        opacity:0; transform:translateY(24px);   /* oculta de inicio; la revela GSAP */
+        transition:background .25s,border-color .25s,transform .2s;
+    }
+    /* Barra inferior desplegable: el mismo gesto que .prod-card, para que la
+       sección nueva no parezca traída de otra web */
+    .review-card::after {
+        content:''; position:absolute; bottom:0; left:0; right:0; height:2px;
+        background:linear-gradient(90deg,var(--red),var(--cyan));
+        transform:scaleX(0); transform-origin:left;
+        transition:transform .35s var(--ease-out);
+    }
+    .review-card:hover { background:rgba(0,229,255,.07); border-color:rgba(0,229,255,.3); transform:translateY(-3px); }
+    .review-card:hover::after { transform:scaleX(1); }
+
+    .rv-stars { font-size:.95rem; letter-spacing:.12em; color:var(--cyan); text-shadow:var(--glow-cyan); line-height:1; }
+
+    /* flex-grow:1 hace que el texto absorba el espacio sobrante y empuje el pie
+       al fondo: así los pies quedan alineados aunque los textos midan distinto */
+    .rv-text { flex-grow:1; font-size:.85rem; font-weight:300; line-height:1.75; color:var(--text); }
+
+    .rv-foot { display:flex; align-items:center; gap:.7rem; border-top:1px solid rgba(0,229,255,.07); padding-top:.9rem; }
+
+    /* Círculo con la inicial, en lugar de la foto de perfil de Google
+       (que no debemos descargar ni alojar) */
+    .rv-avatar {
+        width:30px; height:30px; flex-shrink:0;   /* no se aplasta si el nombre es largo */
+        border-radius:50%; display:flex; align-items:center; justify-content:center;
+        background:rgba(0,229,255,.1); border:1px solid rgba(0,229,255,.25);
+        font-family:var(--f-display); font-size:.65rem; font-weight:700; color:var(--cyan);
+    }
+    .rv-meta { display:flex; flex-direction:column; gap:.12rem; min-width:0; }
+    /* Los tres juntos: si el nombre no cabe, se corta con puntos suspensivos */
+    .rv-name { font-size:.8rem; color:rgba(224,247,250,.85); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    /* LA LÍNEA CLAVE: la atribución. Sin ella son testimonios genéricos que
+       nadie se cree; con ella son reseñas verificables de un tercero */
+    .rv-source { font-family:var(--f-display); font-size:.42rem; letter-spacing:.2em; color:rgba(224,247,250,.3); }
+
     /* Footer */
     footer { padding:3rem 1.5rem; text-align:center; border-top:1px solid rgba(0,229,255,.06); display:flex; flex-direction:column; align-items:center; gap:.45rem; }
     .ft-logo { font-family:var(--f-display); font-size:.62rem; letter-spacing:.3em; color:var(--cyan); text-shadow:var(--glow-cyan); }
@@ -342,6 +405,27 @@
 
     <div class="neon-rule"></div>
 
+    <!-- ═══ RESEÑAS DE GOOGLE ═══════════════════════════════════════
+         Colocada arriba a propósito: con 4,9 y 43 reseñas, es el activo
+         de confianza más fuerte del negocio y debe verse pronto.
+         La rejilla está VACÍA: la rellena el JavaScript desde
+         CONFIG.reviews, igual que la cinta de marcas. Los datos viven en
+         un solo sitio y el HTML sólo reserva el hueco.
+    ══════════════════════════════════════════════════════════════════ -->
+    <section id="sec-reviews" aria-labelledby="h-reviews">
+        <h2 class="sec-head" id="h-reviews">Lo que dicen nuestros clientes</h2>
+        <p class="rv-summary" id="rv-summary"></p>
+        <!-- role="list" avisa a los lectores de pantalla de que esto es una
+             lista, ya que los <article> generados no lo son por defecto -->
+        <div class="reviews-grid" id="reviews-grid" role="list"></div>
+    </section>
+
+    <div class="neon-rule"></div>
+
+    <!-- Sección de productos DESACTIVADA (todo el bloque es un comentario
+         HTML). Para reactivarla, quita la marca de apertura de aquí abajo y
+         la de cierre que hay tras </section>. Su CSS y su animación GSAP
+         siguen en el archivo, listos. -->
     <!-- <section id="sec-products" aria-labelledby="h-products">
         <h2 class="sec-head" id="h-products">Nuestros Productos</h2>
         <div class="grid-products" id="grid-products" role="list">
@@ -352,9 +436,8 @@
             <div class="prod-card" role="listitem"><span class="prod-icon" aria-hidden="true">💻</span><span class="prod-label">Informática</span></div>
             <div class="prod-card" role="listitem"><span class="prod-icon" aria-hidden="true">🔧</span><span class="prod-label">Servicio Técnico</span></div>
         </div>
-    </section> -->
-
-    <div class="neon-rule"></div>
+    </section>
+    <div class="neon-rule"></div> -->
 
     <section id="sec-brands" aria-label="Marcas que distribuimos">
         <div class="brands-marquee-wrap">
@@ -472,6 +555,43 @@ const CONFIG = {
     googleReviewsUrl: 'https://www.google.com/maps/place/Tien21+Electro.+Cebri%C3%A1n/@41.155709,-4.487986,17z/data=!4m8!3m7!1s0xd40d37856a11643:0xd0ca253bf41aea92!8m2!3d41.155709!4d-4.487986!9m1!1b1!16s%2Fg%2F11d_x407gc?entry=ttu&g_ep=EgoyMDI2MDcxMy4wIKXMDSoASAFQAw%3D%3D',
     whatsappNumber: '34670225460',
     brands: ['Samsung','LG','Sony','Bosch','Siemens','Apple','Xiaomi','Hisense','Philips','Beko','Haier','AEG','Panasonic','Toshiba'],
+
+    /*
+     * RESEÑAS DE GOOGLE — copiadas LITERALMENTE de la ficha, sin retocar.
+     * Se han elegido tres que hablan de servicios DISTINTOS (antenas /
+     * reparación urgente / venta y entrega): demuestran que el negocio hace
+     * bien todo lo que dice hacer, mientras que tres elogios genéricos sólo
+     * repetirían el mismo mensaje.
+     * ⚙️ Fechas ABSOLUTAS, nunca "hace 2 meses": eso caduca solo y dentro de
+     *    un año delataría que la web está abandonada. Revísalas al año.
+     */
+    reviews: [
+        {
+            rating: 5,
+            text:   'Mi experiencia es muy buena. Muy buen profesional!! Roberto nos ha colocado la antena de TV en nuestra casa de Ochando. Muy recomendable: serio, puntual y eficiente 👌',
+            author: 'Isabel Castro Quintana',
+            date:   'Julio 2026',
+        },
+        {
+            rating: 5,
+            text:   'Se me estropeó el frigorífico por la noche, me atendieron a pesar de las horas y al día siguiente YA LO TENÍA!!! Superprofesionales, y muy rápidos. Excelente comunicación. TOTALMENTE RECOMENDABLES 🤩',
+            author: 'Carmen Cita',
+            date:   'Noviembre 2025',
+        },
+        {
+            rating: 5,
+            text:   'Excelente servicio de entrega de un lavavajillas y no se puede ser más rápido. No es la primera vez que les compramos y siguen siendo líderes en seriedad y cuidado al cliente. Muy contento con la atención recibida. Absolutamente recomendable.',
+            author: 'Eduardo Rincón',
+            date:   'Agosto 2025',
+        },
+    ],
+
+    // ⚙️ Nº TOTAL de reseñas de la ficha y nota media QUE MUESTRA GOOGLE.
+    // Ojo: la nota NO se calcula a partir de las tres de arriba. Si lo
+    // hiciéramos saldría un 5,0 mientras la ficha dice 4,9 — un dato falso
+    // que cualquiera comprueba en un clic. Se copia de Google y punto.
+    reviewsTotal:   43,
+    reviewsAverage: 4.9,
 
     // Internos — calculados en runtime, no editar
     _kf:    null,  // Posiciones de keyframes
@@ -836,6 +956,59 @@ function buildHUDDots(zones) {
     return Array.from(container.children);
 }
 
+/** Pinta las tarjetas de reseñas y la línea de nota media a partir de
+ *  CONFIG.reviews. Se ejecuta una sola vez al arrancar. No hace ninguna
+ *  petición de red: los textos ya están en el archivo, así que su coste
+ *  para el tiempo de carga es cero. */
+function renderReviews() {
+    const grid = document.getElementById('reviews-grid');
+    const sum  = document.getElementById('rv-summary');
+    // Guarda: si falta el HTML o no hay reseñas configuradas, la sección se
+    // queda vacía en lugar de romper el arranque de toda la página.
+    if (!grid || !CONFIG.reviews || !CONFIG.reviews.length) return;
+
+    // Escapa los caracteres que el navegador interpretaría como HTML. Hoy los
+    // textos los controlas tú, pero en cuanto vengan de un panel o de la API
+    // de Google serán texto ajeno: un '<' suelto rompería el diseño y una
+    // etiqueta inyectada sería un agujero de seguridad. Se hace desde ya.
+    const esc = s => String(s).replace(/[&<>"]/g,
+        c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+
+    // Convierte una nota (4) en su fila de estrellas ('★★★★☆').
+    // Math.max/min recortan al rango 0-5 por si se configura un valor absurdo.
+    const stars = n => {
+        const v = Math.max(0, Math.min(5, Math.round(n)));
+        return '★'.repeat(v) + '☆'.repeat(5 - v);
+    };
+
+    // Genera todas las tarjetas y las inserta de UNA sola vez: el navegador
+    // recalcula el diseño una vez en lugar de tres.
+    grid.innerHTML = CONFIG.reviews.map(r => `
+        <article class="review-card" role="listitem">
+            <div class="rv-stars" role="img" aria-label="${r.rating} de 5 estrellas">${stars(r.rating)}</div>
+            <p class="rv-text">${esc(r.text)}</p>
+            <div class="rv-foot">
+                <span class="rv-avatar" aria-hidden="true">${esc(r.author.trim().charAt(0).toUpperCase())}</span>
+                <span class="rv-meta">
+                    <span class="rv-name">${esc(r.author)}</span>
+                    <span class="rv-source">${esc(r.date)} · EN GOOGLE</span>
+                </span>
+            </div>
+        </article>`).join('');
+
+    // toFixed(1) fija un decimal y replace pone la coma decimal española.
+    const avgTxt = CONFIG.reviewsAverage.toFixed(1).replace('.', ',');
+
+    // El enlace de verificación es lo que convierte las citas en prueba: casi
+    // nadie lo pulsa, pero saber que SE PUEDE comprobar es exactamente lo que
+    // hace que el visitante se las crea.
+    sum.innerHTML =
+        `<strong>${avgTxt}</strong>` +
+        `<span class="rv-stars">${stars(CONFIG.reviewsAverage)}</span>` +
+        `<a href="${CONFIG.googleReviewsUrl}" target="_blank" rel="noopener">` +
+        `Ver las ${CONFIG.reviewsTotal} reseñas en Google →</a>`;
+}
+
 /* ══════════════════════════════════════════════════════════════════
    GSAP — Animación sincronizada con scroll + animaciones de contenido
 ══════════════════════════════════════════════════════════════════ */
@@ -902,6 +1075,13 @@ function setupGSAP() {
         opacity:1, y:0, duration:.5, stagger:.07, ease:'back.out(1.6)',
         scrollTrigger: { trigger:'#grid-products', start:'top 82%' }
     });
+    // Entrada escalonada de las tarjetas de reseña. Se usa gsap.to() y no
+    // from() porque el CSS ya las dejó ocultas y desplazadas: hay que
+    // llevarlas HACIA el estado visible, igual que con .prod-card.
+    gsap.to('.review-card', {
+        opacity:1, y:0, duration:.55, stagger:.09, ease:'power2.out',
+        scrollTrigger: { trigger:'#sec-reviews', start:'top 82%' }
+    });
     gsap.from('.info-block', {
         opacity:0, y:28, duration:.7, stagger:.14, ease:'power2.out',
         scrollTrigger: { trigger:'#sec-info', start:'top 80%' }
@@ -951,10 +1131,15 @@ async function init() {
     // 5. Inicializar canvas y hacer el primer render
     CINEMA.init();
 
-    // 6. Montar la animación GSAP scrubbeada al scroll. Ojo: el scroll
-    //    real sigue bloqueado (html.is-loading) hasta el paso 7, así que
-    //    ScrollTrigger se calcula/posiciona con calma, sin que el usuario
-    //    pueda desplazarse a medias y provocar saltos.
+    // 6. Pintar las reseñas y montar la animación GSAP scrubbeada al scroll.
+    //    EL ORDEN IMPORTA: renderReviews() debe ir ANTES de setupGSAP(),
+    //    porque la animación busca los elementos '.review-card' y, si aún no
+    //    existen, GSAP no encuentra nada y las tarjetas se quedarían
+    //    invisibles para siempre (el CSS las deja en opacity:0 esperando).
+    //    Ojo también: el scroll real sigue bloqueado (html.is-loading) hasta
+    //    el paso 7, así que ScrollTrigger se calcula con calma, sin que el
+    //    usuario pueda desplazarse a medias y provocar saltos.
+    renderReviews();
     setupGSAP();
     CINEMA.render(true);
 
