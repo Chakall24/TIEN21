@@ -458,9 +458,7 @@
 
     <div class="neon-rule"></div>
 
-    <!-- Sección de productos DESACTIVADA (todo el bloque es un comentario
-         HTML). Para reactivarla, quita la marca de apertura de aquí abajo y
-         la de cierre que hay tras </section>. Su CSS y su animación GSAP
+    <!-- Sección de productos DESACTIVADA. Su CSS y su animación GSAP
          siguen en el archivo, listos. -->
     <!-- <section id="sec-products" aria-labelledby="h-products">
         <h2 class="sec-head" id="h-products">Nuestros Productos</h2>
@@ -474,12 +472,6 @@
         </div>
     </section>
     <div class="neon-rule"></div> -->
-
-    <section id="sec-brands" aria-label="Marcas que distribuimos">
-        <div class="brands-marquee-wrap">
-            <div class="brands-marquee" id="brands-marquee" aria-hidden="true"></div>
-        </div>
-    </section>
 
     <div class="neon-rule"></div>
 
@@ -496,7 +488,6 @@
             </div>
             <div class="info-block">
                 <h3>Contacto</h3>
-                <!-- ⚙️ Personaliza tu dirección y teléfonos reales -->
                 <ul>
                     <li>📍 Pl. Sedeño, 3, 40450 Nava de la Asunción, Segovia</li>
                     <li>📞 921 58 00 58</li>
@@ -519,6 +510,12 @@
         </div>
         </div>
     </section>
+    
+    <section id="sec-brands" aria-label="Marcas que distribuimos">
+        <div class="brands-marquee-wrap">
+            <div class="brands-marquee" id="brands-marquee" aria-hidden="true"></div>
+        </div>
+    </section>
 
     <div class="neon-rule"></div>
 
@@ -532,7 +529,7 @@
 
 <script>
 /* ══════════════════════════════════════════════════════════════════
-   ⚙️  CONFIGURACIÓN — Edita aquí para personalizar tu tienda
+   ⚙️  CONFIGURACIÓN 
 ══════════════════════════════════════════════════════════════════ */
 const CONFIG = {
 
@@ -547,10 +544,10 @@ const CONFIG = {
      * líneas correspondientes y nombra tus archivos igual.
      */
     images: [
-        'fotograma-2.png',                                        // Frame real 1 → Fachada exterior
-        'fotograma-3.png',         // Frame real 2 → Puertas abiertas
-        'fotograma-4.png',     // Frame real 3 → Umbral entrada
-        'fotograma-5.png',     // Frame real 4 → Interior túnel
+        'fotograma-2.png',
+        'fotograma-3.png',
+        'fotograma-4.png',
+        'fotograma-5.png',
         'fotograma-6.png',
         'fotograma-7.png',
         'fotograma-8.png',
@@ -586,11 +583,9 @@ const CONFIG = {
     maxContrast:        0.08,   // Boost de contraste cinematográfico (+8%)
     flashBoostPeak:     0.12,   // Destello de luz en el pico de cada transición (+12%)
 
-    // ── Contacto y contenido ─────────────────────────────────────
-    // ⚙️ Cambia estas URLs por las tuyas reales:
     googleReviewsUrl: 'https://www.google.com/maps/place/Tien21+Electro.+Cebri%C3%A1n/@41.155709,-4.487986,17z/data=!4m8!3m7!1s0xd40d37856a11643:0xd0ca253bf41aea92!8m2!3d41.155709!4d-4.487986!9m1!1b1!16s%2Fg%2F11d_x407gc?entry=ttu&g_ep=EgoyMDI2MDcxMy4wIKXMDSoASAFQAw%3D%3D',
     whatsappNumber: '34670225460',
-    brands: ['Samsung','LG','Sony','Bosch','Siemens','Apple','Xiaomi','Hisense','Philips','Beko','Haier','AEG','Panasonic','Toshiba'],
+    brands: ['Samsung','LG','Bosch','Onwa','Apple','Xiaomi','Hisense','Philips','AEG','Teka','Electrolux','JBL','Infiniton'],
 
     /*
      * RESEÑAS DE GOOGLE — copiadas LITERALMENTE de la ficha, sin retocar.
