@@ -258,7 +258,7 @@
     }
     /* La nota media es el dato que más pesa: verificable y difícil de falsear */
     .rv-summary strong { font-size:1.1rem; letter-spacing:.02em; color:var(--cyan); text-shadow:var(--glow-cyan); font-weight:700; }
-    .rv-summary a { color:rgba(0,229,255,.7); text-decoration:none; border-bottom:1px solid rgba(0,229,255,.25); padding-bottom:2px; transition:color .2s,border-color .2s; }
+    .rv-summary a { font-size:.85rem; color:rgba(0,229,255,.7); text-decoration:none; border-bottom:1px solid rgba(0,229,255,.25); padding-bottom:2px; transition:color .2s,border-color .2s; }
     .rv-summary a:hover { color:var(--cyan); border-color:var(--cyan); }
 
     /* ── Cinta desplazante ──────────────────────────────────────
@@ -1186,16 +1186,37 @@ async function init() {
     //    repetido en cada frame durante el render)
     CINEMA.hudDots = buildHUDDots(zn);
 
-    // 4. Cargar imágenes con progreso real visible en el loader
+    // 4. Cargar imágenes Y esperar a que las fuentes web (Orbitron/Inter)
+    //    terminen de intercambiar la fuente de repuesto por la real, todo
+    //    en paralelo, con un mínimo de 900ms para que el loader no parpadee.
+    //    Esperar aquí a las fuentes es la parte importante: si cambian de
+    //    tamaño DESPUÉS de calcular las posiciones de ScrollTrigger, todo lo
+    //    que va debajo del título se desplaza y esas posiciones quedan mal;
+    //    un refresh() posterior con el layout ya distinto puede incluso
+    //    revertir animaciones que ya se habían reproducido (por eso la
+    //    cinta de reseñas se veía "congelada" y luego desaparecía sola).
+    //    Esperando aquí, ScrollTrigger sólo se calcula UNA vez, ya con las
+    //    medidas definitivas, y no hace falta un segundo refresh más tarde.
     const fillEl  = document.getElementById('ld-fill');
     const countEl = document.getElementById('ld-count');
 
-    // Promise.all para cargar imágenes Y garantizar tiempo mínimo de loader (900ms)
+    const fontsReady = (document.fonts && document.fonts.ready)
+        ? document.fonts.ready
+        : Promise.resolve();
+    // Tope de 2s: si por lo que sea el navegador se queda esperando una
+    // fuente que no llega, preferimos arrancar con la de repuesto a
+    // bloquear el scroll indefinidamente.
+    const fontsReadyCapped = Promise.race([
+        fontsReady,
+        new Promise(r => setTimeout(r, 2000)),
+    ]);
+
     const [images] = await Promise.all([
         loadAllImages((loaded, total) => {
             if (fillEl)  fillEl.style.width      = Math.round(loaded / total * 100) + '%';
             if (countEl) countEl.textContent = `Cargando imagen ${loaded} de ${total}...`;
         }),
+        fontsReadyCapped,
         new Promise(r => setTimeout(r, 900)),
     ]);
 
@@ -1220,35 +1241,13 @@ async function init() {
     setupGSAP();
     CINEMA.render(true);
 
-    // 7. Todo cargado, decodificado y montado → desbloqueamos el scroll.
-    //    Este es el punto clave para evitar lag: el recorrido cinemático
-    //    sólo puede empezar cuando ya no hay nada pendiente de cargar.
+    // 7. Todo cargado, decodificado, con las fuentes definitivas ya puestas
+    //    y montado → desbloqueamos el scroll y calculamos las posiciones de
+    //    ScrollTrigger. Al ser la única vez que se hace, y ya con el layout
+    //    final, no hay ningún recálculo posterior que pueda desincronizar
+    //    ni revertir las animaciones de entrada.
     document.documentElement.classList.remove('is-loading');
     if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
-
-    // 7b. Las fuentes web (Orbitron/Inter) se piden en el <head> pero
-    //     pueden tardar en llegar y sustituir a la fuente de repuesto
-    //     ya pintada. Ese intercambio cambia la altura de títulos como
-    //     "Lo que dicen nuestros clientes" y desplaza hacia abajo todo
-    //     lo que viene después (reseñas, info...). El refresh() de
-    //     arriba ya se hizo con las posiciones ANTIGUAS, así que en
-    //     cuanto la fuente entra, los disparadores de scroll quedan
-    //     desfasados y las animaciones (como la cinta de reseñas) no
-    //     saltan hasta que algo — p. ej. el resize que provoca el móvil
-    //     al tocar la pantalla — fuerza un recálculo. Repetimos el
-    //     refresh en cuanto las fuentes están listas para no depender
-    //     de esa casualidad.
-    if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(() => {
-            if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
-        });
-    } else {
-        // Navegadores sin API de fuentes (muy residual): red de
-        // seguridad con un margen prudente en vez de no reintentar nunca.
-        setTimeout(() => {
-            if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
-        }, 500);
-    }
 
     // 8. Ocultar loader con fade suave
     const loader = document.getElementById('loader');
