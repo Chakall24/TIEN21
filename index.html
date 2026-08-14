@@ -15,8 +15,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <!-- defer: sin esto, el navegador para de leer el HTML (y por tanto de
+         poder pintar ni siquiera la pantalla de carga) hasta descargar
+         estos dos scripts. Con defer sigue leyendo y pintando en paralelo;
+         los scripts se ejecutan igualmente en este orden y siempre ANTES
+         de DOMContentLoaded, así que cuando arranca init() (ver el script
+         de abajo) gsap y ScrollTrigger ya existen. -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
 
     <style>
     /* ═══ TOKENS DE DISEÑO ═══════════════════════════════════════ */
@@ -213,15 +219,6 @@
     .prod-card:hover::after { transform:scaleX(1); }
     .prod-icon  { font-size:2rem; display:block; margin-bottom:.65rem; filter:drop-shadow(0 0 7px rgba(0,229,255,.3)); }
     .prod-label { font-family:var(--f-display); font-size:.52rem; letter-spacing:.18em; color:var(--cyan); }
-
-    /* Marcas */
-    #sec-brands { padding:3rem 1.5rem; overflow:hidden; }
-    .brands-marquee-wrap { overflow:hidden; mask-image:linear-gradient(90deg,transparent,black 8%,black 92%,transparent); -webkit-mask-image:linear-gradient(90deg,transparent,black 8%,black 92%,transparent); }
-    .brands-marquee { display:flex; gap:2.5rem; width:max-content; animation:mScroll 22s linear infinite; }
-    .brands-marquee:hover { animation-play-state:paused; }
-    .brand-pill { font-family:var(--f-display); font-size:.58rem; letter-spacing:.22em; color:rgba(0,229,255,.32); border:1px solid rgba(0,229,255,.11); padding:.48rem 1.2rem; border-radius:2px; white-space:nowrap; transition:color .2s,border-color .2s; }
-    .brands-marquee:hover .brand-pill { color:rgba(0,229,255,.58); border-color:rgba(0,229,255,.24); }
-    @keyframes mScroll { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
 
     /* Información + mapa */
     #sec-info { padding:5rem 1.5rem; background:rgba(0,229,255,.016); border-top:1px solid rgba(0,229,255,.07); border-bottom:1px solid rgba(0,229,255,.07); }
@@ -510,12 +507,6 @@
         </div>
         </div>
     </section>
-    
-    <section id="sec-brands" aria-label="Marcas que distribuimos">
-        <div class="brands-marquee-wrap">
-            <div class="brands-marquee" id="brands-marquee" aria-hidden="true"></div>
-        </div>
-    </section>
 
     <div class="neon-rule"></div>
 
@@ -585,7 +576,6 @@ const CONFIG = {
 
     googleReviewsUrl: 'https://www.google.com/maps/place/Tien21+Electro.+Cebri%C3%A1n/@41.155709,-4.487986,17z/data=!4m8!3m7!1s0xd40d37856a11643:0xd0ca253bf41aea92!8m2!3d41.155709!4d-4.487986!9m1!1b1!16s%2Fg%2F11d_x407gc?entry=ttu&g_ep=EgoyMDI2MDcxMy4wIKXMDSoASAFQAw%3D%3D',
     whatsappNumber: '34670225460',
-    brands: ['Samsung','LG','Bosch','Onwa','Apple','Xiaomi','Hisense','Philips','AEG','Teka','Electrolux','JBL','Infiniton'],
 
     /*
      * RESEÑAS DE GOOGLE — copiadas LITERALMENTE de la ficha, sin retocar.
@@ -967,15 +957,33 @@ function makeBackdropCanvas(img) {
     }
 }
 
-/** Carga todas las imágenes secuencialmente con callback de progreso real */
-async function loadAllImages(onProgress) {
+/** Carga todas las imágenes EN PARALELO (no una detrás de otra) y avisa del
+ *  progreso real conforme van llegando.
+ *  Antes este bucle hacía `await loadImg(...)` dentro de un `for`: eso
+ *  obliga a esperar a que la imagen 1 esté descargada Y decodificada del
+ *  todo antes de siquiera EMPEZAR a pedir la imagen 2, y así con las 23.
+ *  Es la forma más lenta posible de cargarlas. Con Promise.all se piden
+ *  las 23 a la vez y el navegador las reparte entre sus conexiones, así
+ *  que el tiempo total pasa a ser (aprox.) el de la más lenta, no la suma
+ *  de las 23 — la diferencia es grande.
+ *  El orden final del array se conserva igual (Promise.all respeta el
+ *  orden de entrada, no el de llegada), así que el motor de frames sigue
+ *  asociando cada imagen a su posición correcta aunque lleguen desordenadas. */
+function loadAllImages(onProgress) {
     const all = CONFIG.images;
-    const out = [];
-    for (let i = 0; i < all.length; i++) {
-        out.push(await loadImg(all[i]));
-        if (onProgress) onProgress(i + 1, all.length);
-    }
-    return out.filter(Boolean);
+    let loaded = 0;
+    const promises = all.map(src =>
+        loadImg(src).then(img => {
+            loaded++;
+            // Al ir en paralelo, el orden de LLEGADA ya no es 1,2,3...
+            // (puede llegar antes la imagen 9 que la 2). El contador de
+            // cuántas van cargadas sigue siendo exacto; lo único que
+            // cambia es que el nombre en pantalla ya no sube en orden.
+            if (onProgress) onProgress(loaded, all.length);
+            return img;
+        })
+    );
+    return Promise.all(promises).then(out => out.filter(Boolean));
 }
 
 /** Genera textura de grano cinematográfico (noise RGBA en canvas → PNG) */
@@ -1075,6 +1083,13 @@ function renderReviews() {
 ══════════════════════════════════════════════════════════════════ */
 function setupGSAP() {
     gsap.registerPlugin(ScrollTrigger);
+    // En móvil, mostrar/ocultar la barra de direcciones del navegador
+    // durante el scroll dispara un 'resize' que NO es un cambio real de
+    // layout (el ancho no cambia, sólo el alto disponible un instante).
+    // Sin esto, ScrollTrigger recalcularía posiciones a media pantalla
+    // en cada uno de esos resize — que es justo lo que se notaba como
+    // "engancharse" al subir y bajar.
+    ScrollTrigger.config({ ignoreMobileResize: true });
     history.scrollRestoration = 'manual';
     window.scrollTo(0, 0);
 
@@ -1211,6 +1226,30 @@ async function init() {
     document.documentElement.classList.remove('is-loading');
     if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
 
+    // 7b. Las fuentes web (Orbitron/Inter) se piden en el <head> pero
+    //     pueden tardar en llegar y sustituir a la fuente de repuesto
+    //     ya pintada. Ese intercambio cambia la altura de títulos como
+    //     "Lo que dicen nuestros clientes" y desplaza hacia abajo todo
+    //     lo que viene después (reseñas, info...). El refresh() de
+    //     arriba ya se hizo con las posiciones ANTIGUAS, así que en
+    //     cuanto la fuente entra, los disparadores de scroll quedan
+    //     desfasados y las animaciones (como la cinta de reseñas) no
+    //     saltan hasta que algo — p. ej. el resize que provoca el móvil
+    //     al tocar la pantalla — fuerza un recálculo. Repetimos el
+    //     refresh en cuanto las fuentes están listas para no depender
+    //     de esa casualidad.
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => {
+            if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+        });
+    } else {
+        // Navegadores sin API de fuentes (muy residual): red de
+        // seguridad con un margen prudente en vez de no reintentar nunca.
+        setTimeout(() => {
+            if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+        }, 500);
+    }
+
     // 8. Ocultar loader con fade suave
     const loader = document.getElementById('loader');
     if (loader) {
@@ -1226,16 +1265,19 @@ async function init() {
     const btnReviews = document.getElementById('btn-reviews');
     if (btnReviews) btnReviews.href = CONFIG.googleReviewsUrl;
 
-    // 11. Marquee de marcas (duplicar para loop infinito)
-    const marquee = document.getElementById('brands-marquee');
-    if (marquee) {
-        const html = CONFIG.brands.map(b => `<span class="brand-pill">${b}</span>`).join('');
-        marquee.innerHTML = html + html;
-    }
-
-    // 12. Manejo de resize y orientación (debounced)
+    // 11. Manejo de resize y orientación (debounced)
     let rTimer;
+    let lastWidth = window.innerWidth;
     const onResize = () => {
+        // El ancho es el que de verdad indica un cambio de layout (ventana
+        // redimensionada, giro del móvil). El alto, en cambio, cambia solo
+        // cuando el navegador móvil muestra/oculta su barra de direcciones
+        // al hacer scroll — no hay nada que recalcular ahí, y hacerlo de
+        // todos modos (redimensionar el canvas + ScrollTrigger.refresh)
+        // es justo el trabajo de más que se notaba como tirón al hacer
+        // scroll. Por eso sólo actuamos si el ancho ha cambiado de verdad.
+        if (window.innerWidth === lastWidth) return;
+        lastWidth = window.innerWidth;
         clearTimeout(rTimer);
         rTimer = setTimeout(() => {
             CINEMA.resize();
